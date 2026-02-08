@@ -1,10 +1,15 @@
+import FabButton from "@/components/ui/FAB/FabButton";
 import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function Index() {
   return (
-    <View style={styles.container}>
-      <Text>Inbox Screen</Text>
-    </View>
+    <SafeAreaProvider>
+      <View style={styles.container}>
+        <Text>Inbox Screen</Text>
+        <FabButton onPress={() => {}} />
+      </View>
+    </SafeAreaProvider>
   );
 }
 
