@@ -16,7 +16,6 @@
         "dark": "./assets/icons/splash-icon-dark.png"
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -25,7 +24,8 @@
         "monochromeImage": "./assets/icons/ic_launcher_monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.elham.TikdoApp"
     },
     "web": {
       "output": "static",
@@ -41,7 +41,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
-            "image": "/assets/icons/splash-icon-light.png",
+            "image": "./assets/icons/splash-icon-light.png",
             "backgroundColor": "#000000"
           }
         }
