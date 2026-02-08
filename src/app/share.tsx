@@ -1,9 +1,9 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function Index() {
+export default function Tab() {
   return (
     <View style={styles.container}>
-      <Text>Inbox Screen</Text>
+      <Text>Share Screen</Text>
     </View>
   );
 }
