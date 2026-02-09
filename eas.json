@@ -1,38 +1,37 @@
-// Used to define build profiles, submission settings, and workflow
-// automation for iOS and Android apps. It allows developers to customize
-// how eas build and eas submit commands behave, such as setting different
-// environments (development, preview, production) without needing manual
-// configuration for every build.
-
 {
-  // eas.json dictates how the application is built and shipped.
+  // EAS (Expo Application Services) config - defines how your app is built and submitted
+  // to app stores using Expo's cloud build service (no local Xcode/Android Studio needed)
+
+  "cli": {
+    "version": ">= 16.32.0", // Minimum EAS CLI version required
+    "appVersionSource": "remote" // Version managed by EAS servers, not locally
+  },
+  // Build profiles - each profile is a different build config you run with:
+  // eas build --profile <name> (e.g. eas build --profile development)
   "build": {
+    // DEV: For daily development. Includes dev tools like hot reload & debugging.
+    // Run: eas build --platform ios --profile development
     "development": {
+      // Includes dev tools (hot reload, debugging)
       "developmentClient": true,
+      // Installs directly on registered devices via ad hoc
       "distribution": "internal"
     },
-    // Test out the app in production-like circumstances.
-    // In this way, they are similar to production builds.
-    // However, they are different from production builds because
-    // they are either not signed for distribution on app stores
+    // PREVIEW: For sharing with testers/QA. Production-like but not on App Store.
+    // Run: eas build --platform ios --profile preview
     "preview": {
-      // This tells EAS to create a build that can be installed
-      // on real devices without going through the Apple App Store
-      // or Google Play Store.
-      "distribution": "internal",
-      // This sets an environment variable during the build process.
-      "env": {
-        "APP_VARIANT": "preview"
-      },
-      // This automatically increases the build number (iOS) or version
-      // code (Android) by 1 for every new build. This prevents errors
-      // when re-uploading new versions for testing, saving you from
-      // having to manually increment numbers.
-      "autoIncrement": true,
-      // This maps this build to a specific EAS Update channel named "preview".
-      "channel": "preview"
+      // Testable build without dev tools (for QA/testing)
+      "distribution": "internal"
     },
-    // Defines settings for the final app store release.
+    // PRODUCTION: Final build for App Store / Google Play submission.
+    // Run: eas build --platform ios --profile production
+    "production": {
+      // Auto-bumps build number on each build
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    // Config for submitting to App Store / Google Play via EAS Submit
     "production": {}
   }
 }

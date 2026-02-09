@@ -14,6 +14,9 @@
       "icon": {
         "light": "./assets/icons/splash-icon-light.png",
         "dark": "./assets/icons/splash-icon-dark.png"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -45,11 +48,25 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "elham-36"
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f7f467ed-4ca4-4f22-a4b0-01ad5ad7752f"
+      }
     }
   }
 }
