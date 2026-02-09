@@ -1,35 +1,40 @@
-import FabButton from "@/components/ui/FAB/FabButton";
-import { increment } from "@/features/counter/counterSlice";
-import { RootState } from "@/store";
+import Chip from "@/components/ui/Chip";
+import FabButton from "@/components/ui/FabButton";
+import { mutated_apricot } from "@/utils/colors";
 import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useDispatch, useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Index(): React.ReactElement {
-  const count = useSelector((state: RootState) => state.counter.value);
-  const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <Text
-          style={{
-            fontFamily: "BalsamiqSans-Regular",
-            fontWeight: 400,
-            fontSize: 24,
-          }}
-        >
-          Inbox Screen: {count}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerText}>
+          Gather it all in one place (Inbox)
         </Text>
-        <FabButton onPress={() => dispatch(increment())} />
+        <Chip
+          title="Brain Dump"
+          icon={require("../../../assets/icons/brain.png")}
+          bgColor={mutated_apricot}
+        ></Chip>
       </View>
-    </SafeAreaProvider>
+      <FabButton onPress={() => {}} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerContainer: {
+    flex: 1 / 8,
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerText: {
+    fontFamily: "BalsamiqSans-Regular",
+    fontWeight: 400,
+    fontSize: 24,
   },
 });

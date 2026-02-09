@@ -27,7 +27,7 @@ export default function FabButton({
         styles.fabutton,
         {
           // Position above the safe area
-          bottom: insets.bottom + 40,
+          bottom: insets.bottom + 80,
         },
       ]}
       onPress={handlePress}
