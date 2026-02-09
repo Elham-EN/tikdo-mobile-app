@@ -1,50 +1,106 @@
-# Welcome to your Expo app 👋
+# Tikdo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app built with React Native and Expo.
 
-## Get started
+## Git Branch Guidelines
 
-1. Install dependencies
+**Principle:** One branch per purpose. Branch name tells you what it's for at a glance.
 
-   ```bash
-   npm install
-   ```
+### Naming Format
 
-2. Start the app
+`<type>/<short-description>`
 
-   ```bash
-   npx expo start
-   ```
+| Type        | When to use                            | Example                      |
+| ----------- | -------------------------------------- | ---------------------------- |
+| `feature/`  | New functionality                      | `feature/task-creation`      |
+| `fix/`      | Bug fixes                              | `fix/fab-button-position`    |
+| `refactor/` | Code restructuring, no behavior change | `refactor/navigation-layout` |
+| `testing/`  | Test setup or coverage                 | `testing/fab-button-tests`   |
 
-In the output, you'll find options to open the app in a
+### Rules
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Always branch off `main`
+- Use kebab-case for descriptions (`task-list`, not `taskList` or `task_list`)
+- Keep descriptions short (2-3 words max)
+- Merge back to `main` via pull request
+- Delete branch after merge
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Commit Message Guidelines
 
-## Get a fresh project
+**Principle:** Each commit message starts with a verb describing what the commit does.
 
-When you're ready, run:
+### Format
 
-```bash
-npm run reset-project
+```
+<verb> <what changed>
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Common Verbs
 
-## Learn more
+| Verb       | When to use                           |
+| ---------- | ------------------------------------- |
+| `add`      | New file, feature, or dependency      |
+| `fix`      | Bug fix                               |
+| `update`   | Change to existing functionality      |
+| `remove`   | Delete code, file, or dependency      |
+| `refactor` | Restructure without changing behavior |
+| `setup`    | Initial configuration or tooling      |
+| `move`     | Relocate files or code                |
 
-To learn more about developing your project with Expo, look at the following resources:
+### Rules
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- Start with a lowercase verb
+- Keep it under 60 characters
+- Describe **what** changed, not **how**
+- One logical change per commit
 
-## Join the community
+### Examples
 
-Join our community of developers creating universal apps.
+```
+add task creation screen with form validation
+fix fab button overlapping navigation bar
+update inbox to show task count
+remove unused calendar placeholder
+setup jest and react-native-testing-library
+refactor tab layout to use shared config
+move components into src directory
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Testing Guidelines
+
+**Principle:** Test behavior from the user's perspective. If a user can't observe it, don't test it.
+
+### Test These
+
+- **User interactions** — tap, swipe, type → verify the visible outcome
+- **Conditional rendering** — loading, empty, error, and populated states show correctly
+- **Callback contracts** — `onPress`/`onSubmit` callbacks fire with correct arguments
+- **Custom hooks with logic** — data transformations, computed values, side effects
+- **Pure utility functions** — validation, formatting, calculations, and their edge cases
+- **Store actions** — calling an action produces the expected state change
+- **Async/API flows** — mock the network, test success and error handling
+
+### Skip These
+
+- **Static text/labels** — if it breaks, you'll see it immediately
+- **Styles** — colors, sizes, and spacing are not behavior
+- **Third-party internals** — Expo Router, React Navigation are tested by their maintainers
+- **Implementation details** — internal state shape, lifecycle, private methods
+- **Snapshot tests** — break on every UI change, rarely catch real bugs
+
+### Query Priority
+
+Use the most accessible query available:
+
+1. `getByRole` — closest to how users see the app
+2. `getByText` — what the user reads
+3. `getByPlaceholderText` — for inputs
+4. `getByTestId` — last resort
+
+### Running Tests
+
+```bash
+npm test                                # all tests
+npm test -- --watch                     # watch mode
+npm test -- __tests__/FabButton-test.tsx # specific file
+```
