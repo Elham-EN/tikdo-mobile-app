@@ -1,18 +1,18 @@
 import FabButton from "@/components/ui/FAB/FabButton";
-import * as Sentry from "@sentry/react-native";
+import { increment } from "@/features/counter/counterSlice";
+import { RootState } from "@/store";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useDispatch, useSelector } from "react-redux";
 
-export default function Index() {
+export default function Index(): React.ReactElement {
+  const count = useSelector((state: RootState) => state.counter.value);
+  const dispatch = useDispatch();
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <Text>Inbox Screen</Text>
-        <FabButton
-          onPress={() => {
-            Sentry.captureException(new Error("First error"));
-          }}
-        />
+        <Text>Inbox Screen: {count}</Text>
+        <FabButton onPress={() => dispatch(increment())} />
       </View>
     </SafeAreaProvider>
   );

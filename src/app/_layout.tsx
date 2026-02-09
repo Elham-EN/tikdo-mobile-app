@@ -1,4 +1,6 @@
 import * as Sentry from "@sentry/react-native";
+import { Provider } from "react-redux";
+import { store } from "../store";
 
 /**
  * a simple Stack — this becomes the top-level navigator
@@ -14,7 +16,11 @@ Sentry.init({
 });
 
 function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Provider store={store}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </Provider>
+  );
 }
 
 export default Sentry.wrap(RootLayout);
