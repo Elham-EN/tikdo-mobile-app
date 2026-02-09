@@ -11,7 +11,15 @@ export default function Index(): React.ReactElement {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <Text>Inbox Screen: {count}</Text>
+        <Text
+          style={{
+            fontFamily: "BalsamiqSans-Regular",
+            fontWeight: 400,
+            fontSize: 24,
+          }}
+        >
+          Inbox Screen: {count}
+        </Text>
         <FabButton onPress={() => dispatch(increment())} />
       </View>
     </SafeAreaProvider>

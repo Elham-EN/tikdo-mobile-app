@@ -56,6 +56,17 @@
           "project": "react-native",
           "organization": "elham-36"
         }
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Balsamiq_Sans/BalsamiqSans-Regular.ttf",
+            "./assets/fonts/Balsamiq_Sans/BalsamiqSans-Bold.ttf",
+            "./assets/fonts/Balsamiq_Sans/BalsamiqSans-Italic.ttf",
+            "./assets/fonts/Balsamiq_Sans/BalsamiqSans-BoldItalic.ttf"
+          ]
+        }
       ]
     ],
     "experiments": {
