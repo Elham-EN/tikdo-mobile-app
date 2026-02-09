@@ -66,6 +66,17 @@ refactor tab layout to use shared config
 move components into src directory
 ```
 
+## Sentry (Error Monitoring)
+
+[Sentry](https://sentry.io) is integrated via `@sentry/react-native` to capture crashes and errors in real time.
+
+- **Initialized** in `src/app/_layout.tsx` — the root layout is wrapped with `Sentry.wrap()`
+- **Dashboard** — errors and performance data appear in the Sentry project dashboard
+- **Test it locally** — throw a test error to verify events reach Sentry:
+  ```tsx
+  <Button title="Test Sentry" onPress={() => Sentry.captureException(new Error("Test error"))} />
+  ```
+
 ## Testing Guidelines
 
 **Principle:** Test behavior from the user's perspective. If a user can't observe it, don't test it.
