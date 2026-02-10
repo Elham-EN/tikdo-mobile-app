@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 
+import { brand, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
 
 interface PlusButtonProps {
@@ -23,14 +24,14 @@ export default function PlusButton({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <AntDesign name="plus" size={16} color="#fff" />
+      <AntDesign name="plus" size={16} color={white} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   fabutton: {
-    backgroundColor: "#038ff7",
+    backgroundColor: brand,
     width: 30,
     height: 30,
     borderRadius: 30,

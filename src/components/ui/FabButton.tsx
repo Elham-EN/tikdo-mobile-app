@@ -1,3 +1,4 @@
+import { brand, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import * as Haptics from "expo-haptics";
 import React from "react";
@@ -33,7 +34,7 @@ export default function FabButton({
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <AntDesign name="plus" size={24} color="#fff" />
+      <AntDesign name="plus" size={24} color={white} />
     </TouchableOpacity>
   );
 }
@@ -42,7 +43,7 @@ const styles = StyleSheet.create({
   fabutton: {
     position: "absolute",
     right: 10,
-    backgroundColor: "#038ff7",
+    backgroundColor: brand,
     width: 60,
     height: 60,
     borderRadius: 30,
