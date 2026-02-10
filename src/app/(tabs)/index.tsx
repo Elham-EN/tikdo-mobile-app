@@ -64,7 +64,6 @@ export default function Index(): React.ReactElement {
             icon={require("../../../assets/icons/trash.png")}
             bgColor={light_grey}
           />
-          <PlusButton onPress={() => {}} />
         </View>
       </View>
     </View>
