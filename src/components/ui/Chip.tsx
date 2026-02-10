@@ -32,6 +32,8 @@ function Chip({ title, icon, bgColor }: ChipProps): React.ReactElement {
       gap: 6,
     },
     chipText: {
+      fontFamily: "BalsamiqSans-Regular",
+      fontWeight: 400,
       fontSize: 16,
       textAlign: "center",
     },
