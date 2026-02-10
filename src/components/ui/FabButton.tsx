@@ -27,7 +27,7 @@ export default function FabButton({
         styles.fabutton,
         {
           // Position above the safe area
-          bottom: insets.bottom + 40,
+          bottom: insets.bottom + 80,
         },
       ]}
       onPress={handlePress}
@@ -41,7 +41,7 @@ export default function FabButton({
 const styles = StyleSheet.create({
   fabutton: {
     position: "absolute",
-    right: 30,
+    right: 10,
     backgroundColor: "#038ff7",
     width: 60,
     height: 60,
