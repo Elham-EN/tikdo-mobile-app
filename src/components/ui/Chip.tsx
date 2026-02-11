@@ -4,50 +4,58 @@
  * or trigger actions.
  */
 
-import React from "react";
-import {
-  Image,
-  ImageSourcePropType,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { dark_chip } from "@/utils/colors";
+import React, { ReactNode } from "react";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface ChipProps {
-  title: string;
-  icon: ImageSourcePropType;
+  title?: string;
+  icon: ReactNode;
   bgColor?: string;
+  textColor?: string;
+  onPress?: () => void;
 }
 
-function Chip({ title, icon, bgColor }: ChipProps): React.ReactElement {
-  const styles = StyleSheet.create({
-    chip: {
-      backgroundColor: bgColor,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 16,
-      flexDirection: "row",
-      justifyContent: "space-around",
-      alignItems: "center",
-      gap: 6,
-    },
-    chipText: {
-      fontFamily: "BalsamiqSans-Regular",
-      fontWeight: 400,
-      fontSize: 16,
-      textAlign: "center",
-    },
-    chipIcon: {
-      width: 24,
-      height: 24,
-    },
-  });
+function Chip({
+  title,
+  icon,
+  bgColor = dark_chip,
+  textColor = "#ccc",
+  onPress,
+}: ChipProps): React.ReactElement {
   return (
-    <View style={styles.chip}>
-      <Image style={styles.chipIcon} source={icon} />
-      <Text style={styles.chipText}>{title}</Text>
-    </View>
+    <TouchableOpacity
+      style={[
+        styles.chip,
+        { backgroundColor: bgColor },
+        !title && styles.iconOnly,
+      ]}
+      activeOpacity={0.7}
+      onPress={onPress}
+    >
+      {icon}
+      {title && <Text style={[styles.chipText, { color: textColor }]}>{title}</Text>}
+    </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  iconOnly: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  chipText: {
+    fontFamily: "BalsamiqSans-Regular",
+    fontSize: 14,
+  },
+});
 
 export default Chip;

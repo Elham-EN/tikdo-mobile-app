@@ -27,6 +27,10 @@ interface AccordionProps {
 
 const ANIMATION_DURATION = 300;
 
+/**
+ * Collapsible accordion with a pill-shaped header.
+ * Tap the header to smoothly expand/collapse the content below it.
+ */
 export default function Accordion({
   title,
   icon = require("../../../assets/icons/box.png"),
@@ -34,40 +38,63 @@ export default function Accordion({
   headerRight,
   children,
 }: AccordionProps): React.ReactElement {
+  // Track whether the accordion is open or closed
   const [expanded, setExpanded] = useState(false);
+  // How tall the content is (needed so the animation
+  // knows where to expand to)
   const [contentHeight, setContentHeight] = useState(0);
 
+  // Animated values for smooth expand/collapse and
+  // chevron rotation
   const animatedHeight = useSharedValue(0);
   const rotation = useSharedValue(0);
 
+  // Captures the actual pixel height of the children when
+  // they first render
   const onContentLayout = (event: LayoutChangeEvent) => {
+    // Get the rendered height of the children content
+    // (how much space it takes up)
     const height = event.nativeEvent.layout.height;
+    // Save this height only once (the first time the content
+    // renders and has a valid height)
+    // This tells the animation how far to expand to when
+    // opening the accordion
     if (height > 0 && contentHeight === 0) {
       setContentHeight(height);
     }
   };
 
+  // Handles opening/closing the accordion
   const toggle = () => {
     const willExpand = !expanded;
     setExpanded(willExpand);
 
+    // Animation settings for smooth motion
     const timingConfig = {
       duration: ANIMATION_DURATION,
       easing: Easing.bezier(0.4, 0, 0.2, 1),
     };
 
+    // Animate height: 0 (collapsed) to contentHeight (expanded)
     animatedHeight.value = withTiming(
       willExpand ? contentHeight : 0,
       timingConfig,
     );
+    // Animate chevron: 0 (down) to 1 (up, rotated 180°)
     rotation.value = withTiming(willExpand ? 1 : 0, timingConfig);
   };
 
+  // Animates the content height when expanding/collapsing
   const bodyStyle = useAnimatedStyle(() => ({
+    // If we haven't measured yet, don't set a height (let content show
+    // naturally to measure it) Once measured, use the animated value to
+    // control height (for smooth expand/collapse)
     height: contentHeight === 0 ? undefined : animatedHeight.value,
+    // Hide any content that exceeds the current height
     overflow: "hidden",
   }));
 
+  // Rotates the chevron when expanding/collapsing
   const chevronStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value * 180}deg` }],
   }));
@@ -98,9 +125,7 @@ export default function Accordion({
             <View style={styles.content}>{children}</View>
           </View>
         )}
-        {contentHeight > 0 && (
-          <View style={styles.content}>{children}</View>
-        )}
+        {contentHeight > 0 && <View style={styles.content}>{children}</View>}
       </Animated.View>
     </View>
   );

@@ -1,17 +1,23 @@
+import AddTaskSheet from "@/components/AddTaskSheet";
 import Accordion from "@/components/ui/Accordion";
+import FabButton from "@/components/ui/FabButton";
 import PlusButton from "@/components/ui/PlusButton";
 import { light_grey } from "@/utils/colors";
+import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function Index(): React.ReactElement {
   const insets = useSafeAreaInsets();
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
       contentContainerStyle={[
         styles.scrollContent,
-        { paddingBottom: insets.bottom + 20 },
+        { paddingBottom: insets.bottom + 100 },
       ]}
       showsVerticalScrollIndicator={false}
     >
@@ -87,6 +93,14 @@ export default function Index(): React.ReactElement {
         </Accordion>
       </View>
     </ScrollView>
+
+      <FabButton onPress={() => setIsSheetVisible(true)} />
+
+      <AddTaskSheet
+        visible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+      />
+    </View>
   );
 }
 
