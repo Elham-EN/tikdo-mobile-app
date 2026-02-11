@@ -1,11 +1,23 @@
-import React, { useEffect } from "react";
+/**
+ * BottomSheet Component
+ *
+ * A reusable modal-style bottom sheet that slides up from the bottom of the screen
+ * with smooth animations. Features include:
+ * - Animated backdrop overlay with semi-transparent black background
+ * - Slide-up/slide-down animations using react-native-reanimated
+ * - Keyboard avoidance for both iOS and Android platforms
+ * - Backdrop tap-to-dismiss functionality
+ * - Proper mounting/unmounting lifecycle with animation completion
+ * - Automatic keyboard dismissal on close
+ */
+import React from "react";
 import {
   Dimensions,
   Keyboard,
-  Pressable,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
+  StyleSheet,
 } from "react-native";
 import Animated, {
   Easing,
@@ -32,25 +44,45 @@ export default function BottomSheet({
   onClose,
   children,
 }: BottomSheetProps): React.ReactElement | null {
+  // Animation values: Initial State: Hidden off-screen and transparent
+  // translateY controls sheet position (starts off-screen),
   const translateY = useSharedValue(SCREEN_HEIGHT);
+  // overlayOpacity controls backdrop fade
   const overlayOpacity = useSharedValue(0);
   // Track mount state so we can unmount after close animation completes
   const [mounted, setMounted] = React.useState(false);
 
-  useEffect(() => {
+  // When visible changes: slide sheet up/down and fade backdrop in/out
+  // Waits for close animation to finish before unmounting
+  React.useEffect(() => {
+    // When visible is true (Opening)
     if (visible) {
+      // It immediately adds the component
       setMounted(true);
-      // Animate in
+      // Animate in:
+      // Fade in from it's current opacity 0 to fully opaque over the
+      // duration
       overlayOpacity.value = withTiming(1, TIMING_CONFIG);
+      // The main content slides up from the bottom of the screen to
+      // its final position (0)
       translateY.value = withTiming(0, TIMING_CONFIG);
+      // When visible is false (Closing)
     } else {
       // Dismiss keyboard in sync with close animation
       Keyboard.dismiss();
-      // Animate out, then unmount
+      // Animate out, then unmount:
+      // overlayOpacity.value = withTiming(0...):
       overlayOpacity.value = withTiming(0, TIMING_CONFIG);
-      translateY.value = withTiming(SCREEN_HEIGHT, TIMING_CONFIG, () => {
-        runOnJS(setMounted)(false);
-      });
+      // The content slides down off the bottom of the screen.
+      translateY.value = withTiming(
+        SCREEN_HEIGHT,
+        TIMING_CONFIG,
+        // It waits for the slide-down animation to finish before
+        // removing the component from the React tree.
+        () => {
+          runOnJS(setMounted)(false);
+        },
+      );
     }
   }, [visible]);
 
@@ -74,7 +106,7 @@ export default function BottomSheet({
       {/* Bottom sheet content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+        style={styles.sheetWrapper}
         pointerEvents="box-none"
       >
         <Animated.View style={[styles.sheet, sheetStyle]}>
@@ -91,7 +123,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     zIndex: 100,
   },
-  keyboardView: {
+  sheetWrapper: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
     zIndex: 101,
