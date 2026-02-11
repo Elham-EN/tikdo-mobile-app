@@ -1,5 +1,6 @@
 import AddTaskSheet from "@/components/AddTaskSheet";
 import Accordion from "@/components/ui/Accordion";
+import AddTodoRow from "@/components/ui/AddTodoRow";
 import FabButton from "@/components/ui/FabButton";
 import PlusButton from "@/components/ui/PlusButton";
 import { light_grey } from "@/utils/colors";
@@ -29,11 +30,7 @@ export default function Index(): React.ReactElement {
           bgColor={light_grey}
           headerRight={<PlusButton onPress={() => {}} />}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>
-              Unprocessed thought - add here
-            </Text>
-          </View>
+          <AddTodoRow placeholder="Unprocessed thought - add here" />
         </Accordion>
       </View>
 
@@ -45,9 +42,7 @@ export default function Index(): React.ReactElement {
           bgColor={light_grey}
           headerRight={<PlusButton onPress={() => {}} />}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>Get it done today - add here</Text>
-          </View>
+          <AddTodoRow placeholder="Get it done today - add here" />
         </Accordion>
 
         <Accordion
@@ -56,9 +51,7 @@ export default function Index(): React.ReactElement {
           bgColor={light_grey}
           headerRight={<PlusButton onPress={() => {}} />}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>Planning ahead - add here</Text>
-          </View>
+          <AddTodoRow placeholder="Planning ahead - add here" />
         </Accordion>
         <Accordion
           title="Someday"
@@ -66,9 +59,7 @@ export default function Index(): React.ReactElement {
           bgColor={light_grey}
           headerRight={<PlusButton onPress={() => {}} />}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>Not Sure When? - add here</Text>
-          </View>
+          <AddTodoRow placeholder="Not Sure When? - add here" />
         </Accordion>
         <Accordion
           title="Anytime"
@@ -76,20 +67,14 @@ export default function Index(): React.ReactElement {
           bgColor={light_grey}
           headerRight={<PlusButton onPress={() => {}} />}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>
-              Could start at anytime - add here
-            </Text>
-          </View>
+          <AddTodoRow placeholder="Could start at anytime - add here" />
         </Accordion>
         <Accordion
           title="Trash"
           icon={require("../../../assets/icons/trash.png")}
           bgColor={light_grey}
         >
-          <View style={styles.addTodoRow}>
-            <Text style={styles.placeholder}>Trashed items here</Text>
-          </View>
+          <AddTodoRow placeholder="Trashed items here" />
         </Accordion>
       </View>
     </ScrollView>
@@ -120,21 +105,5 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     fontSize: 24,
     textAlign: "center",
-  },
-  addTodoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: "#aaa",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  placeholder: {
-    fontFamily: "BalsamiqSans-Regular",
-    fontSize: 15,
-    color: "#666",
   },
 });
