@@ -21,11 +21,11 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const TIMING_CONFIG = {
@@ -80,7 +80,7 @@ export default function BottomSheet({
         // It waits for the slide-down animation to finish before
         // removing the component from the React tree.
         () => {
-          runOnJS(setMounted)(false);
+          scheduleOnRN(setMounted, false);
         },
       );
     }
