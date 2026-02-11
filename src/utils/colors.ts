@@ -17,3 +17,5 @@ export const coral_red = "#FF6B6B";
 export const light_surface = "#FFFFFF";
 
 export const light_chip = "#F0F0F0";
+
+export const maroon_red = "#C3110C";
