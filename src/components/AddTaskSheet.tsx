@@ -1,4 +1,9 @@
-import { coral_red, dark_surface, white } from "@/utils/colors";
+/**
+ * Bottom sheet form for creating a new task with title, description,
+ * and quick-action chips (date, priority, reminders).
+ */
+
+import { coral_red, light_chip, light_surface, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -39,7 +44,7 @@ export default function AddTaskSheet({
           autoFocus
           style={styles.titleInput}
           placeholder="New Task"
-          placeholderTextColor="#999"
+          placeholderTextColor="#aaa"
           value={title}
           onChangeText={setTitle}
           selectionColor={coral_red}
@@ -49,7 +54,7 @@ export default function AddTaskSheet({
         <TextInput
           style={styles.noteInput}
           placeholder="Description about the new task"
-          placeholderTextColor="#777"
+          placeholderTextColor="#bbb"
           value={note}
           onChangeText={setNote}
           multiline
@@ -60,27 +65,34 @@ export default function AddTaskSheet({
         <View style={styles.chipsRow}>
           <Chip
             title="Date"
-            icon={<AntDesign name="calendar" size={16} color="#ccc" />}
+            icon={<AntDesign name="calendar" size={16} color="#666" />}
+            bgColor={light_chip}
+            textColor="#444"
           />
           <Chip
             title="Priority"
-            icon={<AntDesign name="flag" size={16} color="#ccc" />}
+            icon={<AntDesign name="flag" size={16} color="#666" />}
+            bgColor={light_chip}
+            textColor="#444"
           />
           <Chip
             title="Reminders"
-            icon={<AntDesign name="clock-circle" size={16} color="#ccc" />}
+            icon={<AntDesign name="clock-circle" size={16} color="#666" />}
+            bgColor={light_chip}
+            textColor="#444"
           />
           <Chip
-            icon={<AntDesign name="ellipsis" size={20} color="#ccc" />}
+            icon={<AntDesign name="ellipsis" size={20} color="#666" />}
+            bgColor={light_chip}
           />
         </View>
 
         {/* Bottom Row: Section Selector + Send Button */}
         <View style={styles.bottomRow}>
           <TouchableOpacity style={styles.sectionSelector} activeOpacity={0.7}>
-            <AntDesign name="inbox" size={16} color="#aaa" />
+            <AntDesign name="inbox" size={16} color="#777" />
             <Text style={styles.sectionText}>Inbox / This new section</Text>
-            <AntDesign name="down" size={12} color="#aaa" />
+            <AntDesign name="down" size={12} color="#777" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -98,7 +110,7 @@ export default function AddTaskSheet({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: dark_surface,
+    backgroundColor: light_surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
@@ -107,14 +119,14 @@ const styles = StyleSheet.create({
   titleInput: {
     fontFamily: "BalsamiqSans-Bold",
     fontSize: 20,
-    color: white,
+    color: "#1a1a1a",
     paddingVertical: 0,
     marginBottom: 8,
   },
   noteInput: {
     fontFamily: "BalsamiqSans-Regular",
     fontSize: 16,
-    color: "#ccc",
+    color: "#555",
     paddingVertical: 0,
     marginBottom: 20,
     maxHeight: 80,
@@ -138,7 +150,7 @@ const styles = StyleSheet.create({
   sectionText: {
     fontFamily: "BalsamiqSans-Regular",
     fontSize: 14,
-    color: "#aaa",
+    color: "#777",
   },
   sendButton: {
     backgroundColor: coral_red,
