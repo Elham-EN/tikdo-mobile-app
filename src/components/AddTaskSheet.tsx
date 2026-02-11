@@ -3,10 +3,21 @@
  * and quick-action chips (date, priority, reminders).
  */
 
+import { useAddTodoItemMutation } from "@/features/todos/todosApi";
+import { addTodoSchema, type AddTodoFormInputs } from "@/schemas/addTodoSchema";
 import { coral_red, light_chip, light_surface, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Controller, useForm } from "react-hook-form";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheet from "./ui/BottomSheet";
 import Chip from "./ui/Chip";
@@ -21,45 +32,90 @@ export default function AddTaskSheet({
   onClose,
 }: AddTaskSheetProps): React.ReactElement {
   const insets = useSafeAreaInsets();
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+  const [formKey, setFormKey] = useState(0);
+
+  const [addTodoItem] = useAddTodoItemMutation();
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<AddTodoFormInputs>({
+    resolver: zodResolver(addTodoSchema),
+    defaultValues: { title: "", notes: null },
+  });
 
   useEffect(() => {
-    if (!visible) {
-      setTitle("");
-      setNote("");
+    if (visible) {
+      // Each time the sheet opens, formKey increments, which forces
+      // React Native to destroy and recreate the notes TextInput.
+      // This avoids the stale placeholder rendering glitch.
+      setFormKey((k) => k + 1);
+    } else {
+      reset();
     }
-  }, [visible]);
+  }, [visible, reset]);
 
-  const handleSend = () => {
-    // TODO: handle task creation
-    onClose();
+  const onSubmit = async (data: AddTodoFormInputs) => {
+    try {
+      const task = await addTodoItem(data).unwrap();
+      console.log("Task created:", task);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
+    } catch (error) {
+      console.error("Failed to create task:", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
   };
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
+      <View
+        key={formKey}
+        style={[styles.container, { paddingBottom: insets.bottom + 8 }]}
+      >
         {/* Title Input */}
-        <TextInput
-          autoFocus
-          style={styles.titleInput}
-          placeholder="New Task"
-          placeholderTextColor="#aaa"
-          value={title}
-          onChangeText={setTitle}
-          selectionColor={coral_red}
+        <Controller
+          control={control}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              autoFocus
+              style={styles.titleInput}
+              placeholder="New Task"
+              placeholderTextColor="#aaa"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              selectionColor={coral_red}
+            />
+          )}
+          name="title"
         />
+        {errors.title && (
+          <Text style={{ color: coral_red }}>{errors.title.message}</Text>
+        )}
 
         {/* Note Input */}
-        <TextInput
-          style={styles.noteInput}
-          placeholder="Description about the new task"
-          placeholderTextColor="#bbb"
-          value={note}
-          onChangeText={setNote}
-          multiline
-          selectionColor={coral_red}
+        <Controller
+          control={control}
+          render={({ field: { onChange, onBlur, value } }) => (
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Description about the new task"
+              placeholderTextColor="#bbb"
+              value={value ?? ""}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              multiline
+              selectionColor={coral_red}
+            />
+          )}
+          name="notes"
         />
+        {errors.notes && (
+          <Text style={{ color: coral_red }}>{errors.notes.message}</Text>
+        )}
 
         {/* Action Chips Row */}
         <View style={styles.chipsRow}>
@@ -97,7 +153,9 @@ export default function AddTaskSheet({
 
           <TouchableOpacity
             style={styles.sendButton}
-            onPress={handleSend}
+            onPress={handleSubmit(onSubmit, () =>
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error),
+            )}
             activeOpacity={0.7}
           >
             <AntDesign name="arrow-up" size={22} color={white} />
