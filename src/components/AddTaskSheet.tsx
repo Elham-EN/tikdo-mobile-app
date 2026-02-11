@@ -1,9 +1,10 @@
-import { coral_red, dark_chip, dark_surface, white } from "@/utils/colors";
+import { coral_red, dark_surface, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheet from "./ui/BottomSheet";
+import Chip from "./ui/Chip";
 
 interface AddTaskSheetProps {
   visible: boolean;
@@ -57,24 +58,21 @@ export default function AddTaskSheet({
 
         {/* Action Chips Row */}
         <View style={styles.chipsRow}>
-          <TouchableOpacity style={styles.chip} activeOpacity={0.7}>
-            <AntDesign name="calendar" size={16} color="#ccc" />
-            <Text style={styles.chipText}>Date</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.chip} activeOpacity={0.7}>
-            <AntDesign name="flag" size={16} color="#ccc" />
-            <Text style={styles.chipText}>Priority</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.chip} activeOpacity={0.7}>
-            <AntDesign name="clock-circle" size={16} color="#ccc" />
-            <Text style={styles.chipText}>Reminders</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.chipMore} activeOpacity={0.7}>
-            <AntDesign name="ellipsis" size={20} color="#ccc" />
-          </TouchableOpacity>
+          <Chip
+            title="Date"
+            icon={<AntDesign name="calendar" size={16} color="#ccc" />}
+          />
+          <Chip
+            title="Priority"
+            icon={<AntDesign name="flag" size={16} color="#ccc" />}
+          />
+          <Chip
+            title="Reminders"
+            icon={<AntDesign name="clock-circle" size={16} color="#ccc" />}
+          />
+          <Chip
+            icon={<AntDesign name="ellipsis" size={20} color="#ccc" />}
+          />
         </View>
 
         {/* Bottom Row: Section Selector + Send Button */}
@@ -126,26 +124,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     marginBottom: 20,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: dark_chip,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  chipMore: {
-    backgroundColor: dark_chip,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  chipText: {
-    fontFamily: "BalsamiqSans-Regular",
-    fontSize: 14,
-    color: "#ccc",
   },
   bottomRow: {
     flexDirection: "row",
