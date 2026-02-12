@@ -3,8 +3,13 @@
  * and quick-action chips (date, priority, reminders).
  */
 
+import BottomSheet from "@/components/ui/BottomSheet";
+import Chip from "@/components/ui/Chip";
+import {
+  addTodoSchema,
+  type AddTodoFormInputs,
+} from "@/features/todos/schemas/addTodoSchema";
 import { useAddTodoItemMutation } from "@/features/todos/todosApi";
-import { addTodoSchema, type AddTodoFormInputs } from "@/schemas/addTodoSchema";
 import { coral_red, light_chip, light_surface, white } from "@/utils/colors";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,8 +24,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BottomSheet from "./ui/BottomSheet";
-import Chip from "./ui/Chip";
 
 interface AddTaskSheetProps {
   visible: boolean;
