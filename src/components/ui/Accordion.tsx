@@ -26,6 +26,7 @@ interface AccordionProps {
   stickyTop?: React.ReactNode;
   maxContentHeight?: number;
   children: React.ReactNode;
+  listSize: number;
 }
 
 const ANIMATION_DURATION = 300;
@@ -42,6 +43,7 @@ export default function Accordion({
   stickyTop,
   maxContentHeight = 300,
   children,
+  listSize,
 }: AccordionProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
@@ -111,6 +113,7 @@ export default function Accordion({
         >
           <Image source={icon} style={styles.icon} />
           <Text style={styles.title}>{title}</Text>
+          <Text>({String(listSize)})</Text>
           <Animated.View style={chevronStyle}>
             <Entypo name="chevron-down" size={18} color="#555" />
           </Animated.View>

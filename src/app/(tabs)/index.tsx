@@ -50,6 +50,7 @@ export default function Index(): React.ReactElement {
             stickyTop={
               <AddTodoRow placeholder="Unprocessed thought - add here" />
             }
+            listSize={inboxes.length}
           >
             {isLoading ? (
               <Text>Loading todos...</Text>
@@ -69,6 +70,7 @@ export default function Index(): React.ReactElement {
             stickyTop={
               <AddTodoRow placeholder="Get it done today - add here" />
             }
+            listSize={todayItems.length}
           >
             {todayItems.map((todo) => (
               <TodoItem key={todo.id} todo={todo} />
@@ -81,6 +83,7 @@ export default function Index(): React.ReactElement {
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
             stickyTop={<AddTodoRow placeholder="Planning ahead - add here" />}
+            listSize={upcomingItems.length}
           >
             {upcomingItems.map((todo) => (
               <TodoItem key={todo.id} todo={todo} />
@@ -92,6 +95,7 @@ export default function Index(): React.ReactElement {
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
             stickyTop={<AddTodoRow placeholder="Not Sure When? - add here" />}
+            listSize={somedayItems.length}
           >
             {somedayItems.map((todo) => (
               <TodoItem key={todo.id} todo={todo} />
@@ -102,6 +106,7 @@ export default function Index(): React.ReactElement {
             icon={require("../../../assets/icons/trash.png")}
             bgColor={coral_red}
             stickyTop={<AddTodoRow placeholder="Trashed items here" />}
+            listSize={trashedItems.length}
           >
             {trashedItems.map((todo) => (
               <TodoItem key={todo.id} todo={todo} />
