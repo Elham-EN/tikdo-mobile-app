@@ -6,7 +6,6 @@ import {
   ImageSourcePropType,
   LayoutChangeEvent,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -24,7 +23,6 @@ interface AccordionProps {
   bgColor?: string;
   headerRight?: React.ReactNode;
   stickyTop?: React.ReactNode;
-  maxContentHeight?: number;
   children: React.ReactNode;
   listSize: number;
 }
@@ -41,12 +39,12 @@ export default function Accordion({
   bgColor = light_grey,
   headerRight,
   stickyTop,
-  maxContentHeight = 300,
   children,
   listSize,
 }: AccordionProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
+  // A ref is a mutable container that persists across renders.
   const expandedRef = useRef(false);
 
   const animatedHeight = useSharedValue(0);
@@ -58,8 +56,7 @@ export default function Accordion({
       setContentHeight(height);
       // If expanded, animate to the new height so content isn't clipped
       if (expandedRef.current) {
-        const target = Math.min(height, maxContentHeight);
-        animatedHeight.value = withTiming(target, {
+        animatedHeight.value = withTiming(height, {
           duration: ANIMATION_DURATION,
           easing: Easing.bezier(0.4, 0, 0.2, 1),
         });
@@ -79,10 +76,8 @@ export default function Accordion({
       easing: Easing.bezier(0.4, 0, 0.2, 1),
     };
 
-    // Animate height: 0 (collapsed) to capped height (expanded)
-    const targetHeight = Math.min(contentHeight, maxContentHeight);
     animatedHeight.value = withTiming(
-      willExpand ? targetHeight : 0,
+      willExpand ? contentHeight : 0,
       timingConfig,
     );
     // Animate chevron: 0 (down) to 1 (up, rotated 180°)
@@ -121,7 +116,10 @@ export default function Accordion({
         {headerRight}
       </View>
 
-      {/* Hidden measurer — always rendered so it re-measures when children change */}
+      {/* Hidden measurer — always rendered so it re-measures when children change
+        In short: it's an invisible clone of the content whose only job is to tell 
+        you "this content is X pixels tall" so the animation knows where to expand to. 
+        */}
       <View style={styles.measurer} onLayout={onContentLayout}>
         <View style={styles.content}>
           {stickyTop}
@@ -129,16 +127,10 @@ export default function Accordion({
         </View>
       </View>
 
-      <Animated.View style={[bodyStyle, { flex: 0 }]}>
-        <View style={[styles.content, { flex: 1 }]}>
+      <Animated.View style={bodyStyle}>
+        <View style={styles.content}>
           {stickyTop}
-          <ScrollView
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={contentHeight > maxContentHeight}
-            style={{ flex: 1, marginTop: 5 }}
-          >
-            {children}
-          </ScrollView>
+          {children}
         </View>
       </Animated.View>
     </View>

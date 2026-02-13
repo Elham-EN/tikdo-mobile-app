@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from "react-redux";
 import { store } from "../store";
 
@@ -18,7 +19,9 @@ Sentry.init({
 function RootLayout() {
   return (
     <Provider store={store}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </GestureHandlerRootView>
     </Provider>
   );
 }
