@@ -3,6 +3,8 @@ import AddTodoRow from "@/components/ui/AddTodoRow";
 import FabButton from "@/components/ui/FabButton";
 import PlusButton from "@/components/ui/PlusButton";
 import AddTaskSheet from "@/features/todos/components/AddTaskSheet";
+import TodoItem from "@/features/todos/components/TodoItem";
+import { useGetTodoItemsQuery } from "@/features/todos/todosApi";
 import { coral_red, light_grey } from "@/utils/colors";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -11,6 +13,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function Index(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const { data: todos = [], isLoading } = useGetTodoItemsQuery();
+
+  const inboxes = todos.filter(
+    (todo) => todo.listType === "inbox" && todo.status !== "deleted",
+  );
+  const todayItems = todos.filter(
+    (todo) => todo.listType === "today" && todo.status !== "deleted",
+  );
+  const upcomingItems = todos.filter(
+    (todo) => todo.listType === "upcoming" && todo.status !== "deleted",
+  );
+  const somedayItems = todos.filter(
+    (todo) => todo.listType === "someday" && todo.status !== "deleted",
+  );
+
+  const trashedItems = todos.filter((todo) => todo.status === "deleted");
 
   return (
     <View style={{ flex: 1 }}>
@@ -29,8 +47,15 @@ export default function Index(): React.ReactElement {
             icon={require("../../../assets/icons/brain.png")}
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
+            stickyTop={
+              <AddTodoRow placeholder="Unprocessed thought - add here" />
+            }
           >
-            <AddTodoRow placeholder="Unprocessed thought - add here" />
+            {isLoading ? (
+              <Text>Loading todos...</Text>
+            ) : (
+              inboxes.map((todo) => <TodoItem key={todo.id} todo={todo} />)
+            )}
           </Accordion>
         </View>
 
@@ -41,8 +66,13 @@ export default function Index(): React.ReactElement {
             icon={require("../../../assets/icons/sun.png")}
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
+            stickyTop={
+              <AddTodoRow placeholder="Get it done today - add here" />
+            }
           >
-            <AddTodoRow placeholder="Get it done today - add here" />
+            {todayItems.map((todo) => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
           </Accordion>
 
           <Accordion
@@ -50,31 +80,32 @@ export default function Index(): React.ReactElement {
             icon={require("../../../assets/icons/upcoming.png")}
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
+            stickyTop={<AddTodoRow placeholder="Planning ahead - add here" />}
           >
-            <AddTodoRow placeholder="Planning ahead - add here" />
+            {upcomingItems.map((todo) => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
           </Accordion>
           <Accordion
             title="Someday"
             icon={require("../../../assets/icons/box.png")}
             bgColor={light_grey}
             headerRight={<PlusButton onPress={() => {}} />}
+            stickyTop={<AddTodoRow placeholder="Not Sure When? - add here" />}
           >
-            <AddTodoRow placeholder="Not Sure When? - add here" />
-          </Accordion>
-          <Accordion
-            title="Anytime"
-            icon={require("../../../assets/icons/anytime.png")}
-            bgColor={light_grey}
-            headerRight={<PlusButton onPress={() => {}} />}
-          >
-            <AddTodoRow placeholder="Could start at anytime - add here" />
+            {somedayItems.map((todo) => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
           </Accordion>
           <Accordion
             title="Trash"
             icon={require("../../../assets/icons/trash.png")}
             bgColor={coral_red}
+            stickyTop={<AddTodoRow placeholder="Trashed items here" />}
           >
-            <AddTodoRow placeholder="Trashed items here" />
+            {trashedItems.map((todo) => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
           </Accordion>
         </View>
       </ScrollView>
