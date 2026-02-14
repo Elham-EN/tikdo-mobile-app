@@ -7,7 +7,7 @@ import TodoItem from "@/features/todos/components/TodoItem";
 import { DropZoneProvider } from "@/features/todos/context/DropZoneContext";
 import { useGetTodoItemsQuery } from "@/features/todos/todosApi";
 import { coral_red, light_grey } from "@/utils/colors";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,26 +15,30 @@ export default function Index(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const [isSheetVisible, setIsSheetVisible] = useState(false);
   const { data: todos = [], isLoading } = useGetTodoItemsQuery();
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const inboxes = todos.filter(
-    (todo) => todo.listType === "inbox" && todo.status !== "deleted",
-  );
-  const todayItems = todos.filter(
-    (todo) => todo.listType === "today" && todo.status !== "deleted",
-  );
-  const upcomingItems = todos.filter(
-    (todo) => todo.listType === "upcoming" && todo.status !== "deleted",
-  );
-  const somedayItems = todos.filter(
-    (todo) => todo.listType === "someday" && todo.status !== "deleted",
-  );
+  const inboxes = todos
+    .filter((todo) => todo.listType === "inbox" && todo.status !== "deleted")
+    .sort((a, b) => a.position - b.position);
+  const todayItems = todos
+    .filter((todo) => todo.listType === "today" && todo.status !== "deleted")
+    .sort((a, b) => a.position - b.position);
+  const upcomingItems = todos
+    .filter((todo) => todo.listType === "upcoming" && todo.status !== "deleted")
+    .sort((a, b) => a.position - b.position);
+  const somedayItems = todos
+    .filter((todo) => todo.listType === "someday" && todo.status !== "deleted")
+    .sort((a, b) => a.position - b.position);
 
-  const trashedItems = todos.filter((todo) => todo.status === "deleted");
+  const trashedItems = todos
+    .filter((todo) => todo.status === "deleted")
+    .sort((a, b) => a.position - b.position);
 
   return (
     <DropZoneProvider>
       <View style={{ flex: 1 }}>
         <ScrollView
+          ref={scrollViewRef}
           style={[styles.container, { paddingTop: insets.top }]}
           contentContainerStyle={[
             styles.scrollContent,
@@ -58,7 +62,9 @@ export default function Index(): React.ReactElement {
               {isLoading ? (
                 <Text>Loading todos...</Text>
               ) : (
-                inboxes.map((todo) => <TodoItem key={todo.id} todo={todo} />)
+                inboxes.map((todo, index) => (
+                  <TodoItem key={todo.id} todo={todo} index={index} />
+                ))
               )}
             </Accordion>
           </View>
@@ -76,8 +82,8 @@ export default function Index(): React.ReactElement {
               listSize={todayItems.length}
               listType="today"
             >
-              {todayItems.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} />
+              {todayItems.map((todo, index) => (
+                <TodoItem key={todo.id} todo={todo} index={index} />
               ))}
             </Accordion>
 
@@ -90,8 +96,8 @@ export default function Index(): React.ReactElement {
               listSize={upcomingItems.length}
               listType="upcoming"
             >
-              {upcomingItems.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} />
+              {upcomingItems.map((todo, index) => (
+                <TodoItem key={todo.id} todo={todo} index={index} />
               ))}
             </Accordion>
             <Accordion
@@ -103,8 +109,8 @@ export default function Index(): React.ReactElement {
               listSize={somedayItems.length}
               listType="someday"
             >
-              {somedayItems.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} />
+              {somedayItems.map((todo, index) => (
+                <TodoItem key={todo.id} todo={todo} index={index} />
               ))}
             </Accordion>
             <Accordion
@@ -115,8 +121,8 @@ export default function Index(): React.ReactElement {
               listSize={trashedItems.length}
               listType="trash"
             >
-              {trashedItems.map((todo) => (
-                <TodoItem key={todo.id} todo={todo} />
+              {trashedItems.map((todo, index) => (
+                <TodoItem key={todo.id} todo={todo} index={index} />
               ))}
             </Accordion>
           </View>

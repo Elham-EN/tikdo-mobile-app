@@ -1,4 +1,5 @@
-import { useDropZones } from "@/features/todos/context/DropZoneContext";
+import { useActiveDropZone, useDropZones } from "@/features/todos/context/DropZoneContext";
+import { ItemPositionProvider } from "@/features/todos/context/ItemPositionContext";
 import { ListType } from "@/features/todos/types";
 import { light_grey } from "@/utils/colors";
 import { Entypo } from "@expo/vector-icons";
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -53,6 +55,7 @@ export default function Accordion({
   const containerRef = useRef<View>(null);
 
   const dropZones = useDropZones();
+  const activeDropZone = useActiveDropZone();
 
   const animatedHeight = useSharedValue(0);
   const rotation = useSharedValue(0);
@@ -110,8 +113,28 @@ export default function Accordion({
     transform: [{ rotate: `${rotation.value * 180}deg` }],
   }));
 
+  // Highlights the accordion when an item is hovering over it
+  const containerStyle = useAnimatedStyle(() => {
+    const isHovered = activeDropZone.value === listType;
+    return {
+      backgroundColor: withTiming(
+        isHovered
+          ? interpolateColor(
+              1,
+              [0, 1],
+              ["#FFFFFF", listType === "trash" ? "#FFE5E5" : "#E3F2FD"]
+            )
+          : "#FFFFFF",
+        { duration: 200 }
+      ),
+      borderRadius: withTiming(isHovered ? 12 : 0, { duration: 200 }),
+      borderWidth: withTiming(isHovered ? 2 : 0, { duration: 200 }),
+      borderColor: listType === "trash" ? "#FF6B6B" : "#2196F3",
+    };
+  });
+
   return (
-    <View ref={containerRef} style={styles.container} onLayout={registerBounds}>
+    <Animated.View ref={containerRef} style={[styles.container, containerStyle]} onLayout={registerBounds}>
       <View style={styles.headerRow}>
         <Pressable
           style={({ pressed }) => [
@@ -135,20 +158,22 @@ export default function Accordion({
         In short: it's an invisible clone of the content whose only job is to tell 
         you "this content is X pixels tall" so the animation knows where to expand to. 
         */}
-      <View style={styles.measurer} onLayout={onContentLayout}>
-        <View style={styles.content}>
-          {stickyTop}
-          {children}
+      <ItemPositionProvider>
+        <View style={styles.measurer} onLayout={onContentLayout}>
+          <View style={styles.content}>
+            {stickyTop}
+            {children}
+          </View>
         </View>
-      </View>
 
-      <Animated.View style={bodyStyle}>
-        <View style={styles.content}>
-          {stickyTop}
-          {children}
-        </View>
-      </Animated.View>
-    </View>
+        <Animated.View style={bodyStyle}>
+          <View style={styles.content}>
+            {stickyTop}
+            {children}
+          </View>
+        </Animated.View>
+      </ItemPositionProvider>
+    </Animated.View>
   );
 }
 

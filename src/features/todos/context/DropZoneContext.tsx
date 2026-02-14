@@ -11,6 +11,7 @@
  */
 
 import React, { createContext, useContext, useRef } from "react";
+import { useSharedValue } from "react-native-reanimated";
 import { ListType } from "../types";
 
 export interface DropZoneBounds {
@@ -24,26 +25,40 @@ export interface DropZoneBounds {
 // The ref holds a record keyed by listType
 type DropZoneMap = Partial<Record<ListType | "trash", DropZoneBounds>>;
 
+interface DropZoneContextValue {
+  dropZonesRef: React.RefObject<DropZoneMap>;
+  // Shared value that holds the currently hovered listType (or null)
+  activeDropZone: ReturnType<typeof useSharedValue<ListType | "trash" | null>>;
+}
+
 // The context holds a ref to a map of accordion positions:
-const DropZoneContext = createContext<React.RefObject<DropZoneMap> | null>(
-  null,
-);
+const DropZoneContext = createContext<DropZoneContextValue | null>(null);
 
 export function DropZoneProvider({ children }: { children: React.ReactNode }) {
   // Because these positions update frequently (on every layout/scroll) and we
   // don't want React re-renders every time — the gesture handler reads the
   // values imperatively on drop.
   const dropZonesRef = useRef<DropZoneMap>({});
+  // Shared value to track which drop zone is currently hovered
+  const activeDropZone = useSharedValue<ListType | "trash" | null>(null);
+
   return (
-    <DropZoneContext.Provider value={dropZonesRef}>
+    <DropZoneContext.Provider value={{ dropZonesRef, activeDropZone }}>
       {children}
     </DropZoneContext.Provider>
   );
 }
 
 export function useDropZones() {
-  const ref = useContext(DropZoneContext);
-  if (!ref)
+  const context = useContext(DropZoneContext);
+  if (!context)
     throw new Error("useDropZones must be used within DropZoneProvider");
-  return ref;
+  return context.dropZonesRef;
+}
+
+export function useActiveDropZone() {
+  const context = useContext(DropZoneContext);
+  if (!context)
+    throw new Error("useActiveDropZone must be used within DropZoneProvider");
+  return context.activeDropZone;
 }
