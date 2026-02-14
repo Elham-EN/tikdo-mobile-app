@@ -1,6 +1,9 @@
+import { useActiveDropZone, useDropZones } from "@/features/todos/context/DropZoneContext";
+import { ItemPositionProvider } from "@/features/todos/context/ItemPositionContext";
+import { ListType } from "@/features/todos/types";
 import { light_grey } from "@/utils/colors";
 import { Entypo } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Image,
   ImageSourcePropType,
@@ -12,6 +15,7 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -22,7 +26,10 @@ interface AccordionProps {
   icon?: ImageSourcePropType;
   bgColor?: string;
   headerRight?: React.ReactNode;
+  stickyTop?: React.ReactNode;
   children: React.ReactNode;
+  listSize: number;
+  listType: ListType | "trash";
 }
 
 const ANIMATION_DURATION = 300;
@@ -36,31 +43,42 @@ export default function Accordion({
   icon = require("../../../assets/icons/box.png"),
   bgColor = light_grey,
   headerRight,
+  stickyTop,
   children,
+  listSize,
+  listType,
 }: AccordionProps): React.ReactElement {
-  // Track whether the accordion is open or closed
   const [expanded, setExpanded] = useState(false);
-  // How tall the content is (needed so the animation
-  // knows where to expand to)
   const [contentHeight, setContentHeight] = useState(0);
+  // A ref is a mutable container that persists across renders.
+  const expandedRef = useRef(false);
+  const containerRef = useRef<View>(null);
 
-  // Animated values for smooth expand/collapse and
-  // chevron rotation
+  const dropZones = useDropZones();
+  const activeDropZone = useActiveDropZone();
+
   const animatedHeight = useSharedValue(0);
   const rotation = useSharedValue(0);
 
-  // Captures the actual pixel height of the children when
-  // they first render
+  const registerBounds = () => {
+    // measureInWindow gives the accordion's position on the actual screen,
+    // which you can directly compare against the finger position.
+    containerRef.current?.measureInWindow((x, y, width, height) => {
+      dropZones.current[listType] = { y, height, listType };
+    });
+  };
+
   const onContentLayout = (event: LayoutChangeEvent) => {
-    // Get the rendered height of the children content
-    // (how much space it takes up)
     const height = event.nativeEvent.layout.height;
-    // Save this height only once (the first time the content
-    // renders and has a valid height)
-    // This tells the animation how far to expand to when
-    // opening the accordion
-    if (height > 0 && contentHeight === 0) {
+    if (height > 0) {
       setContentHeight(height);
+      // If expanded, animate to the new height so content isn't clipped
+      if (expandedRef.current) {
+        animatedHeight.value = withTiming(height, {
+          duration: ANIMATION_DURATION,
+          easing: Easing.bezier(0.4, 0, 0.2, 1),
+        });
+      }
     }
   };
 
@@ -68,6 +86,7 @@ export default function Accordion({
   const toggle = () => {
     const willExpand = !expanded;
     setExpanded(willExpand);
+    expandedRef.current = willExpand;
 
     // Animation settings for smooth motion
     const timingConfig = {
@@ -75,7 +94,6 @@ export default function Accordion({
       easing: Easing.bezier(0.4, 0, 0.2, 1),
     };
 
-    // Animate height: 0 (collapsed) to contentHeight (expanded)
     animatedHeight.value = withTiming(
       willExpand ? contentHeight : 0,
       timingConfig,
@@ -86,11 +104,7 @@ export default function Accordion({
 
   // Animates the content height when expanding/collapsing
   const bodyStyle = useAnimatedStyle(() => ({
-    // If we haven't measured yet, don't set a height (let content show
-    // naturally to measure it) Once measured, use the animated value to
-    // control height (for smooth expand/collapse)
-    height: contentHeight === 0 ? undefined : animatedHeight.value,
-    // Hide any content that exceeds the current height
+    height: animatedHeight.value,
     overflow: "hidden",
   }));
 
@@ -99,8 +113,28 @@ export default function Accordion({
     transform: [{ rotate: `${rotation.value * 180}deg` }],
   }));
 
+  // Highlights the accordion when an item is hovering over it
+  const containerStyle = useAnimatedStyle(() => {
+    const isHovered = activeDropZone.value === listType;
+    return {
+      backgroundColor: withTiming(
+        isHovered
+          ? interpolateColor(
+              1,
+              [0, 1],
+              ["#FFFFFF", listType === "trash" ? "#FFE5E5" : "#E3F2FD"]
+            )
+          : "#FFFFFF",
+        { duration: 200 }
+      ),
+      borderRadius: withTiming(isHovered ? 12 : 0, { duration: 200 }),
+      borderWidth: withTiming(isHovered ? 2 : 0, { duration: 200 }),
+      borderColor: listType === "trash" ? "#FF6B6B" : "#2196F3",
+    };
+  });
+
   return (
-    <View style={styles.container}>
+    <Animated.View ref={containerRef} style={[styles.container, containerStyle]} onLayout={registerBounds}>
       <View style={styles.headerRow}>
         <Pressable
           style={({ pressed }) => [
@@ -112,6 +146,7 @@ export default function Accordion({
         >
           <Image source={icon} style={styles.icon} />
           <Text style={styles.title}>{title}</Text>
+          <Text>({String(listSize)})</Text>
           <Animated.View style={chevronStyle}>
             <Entypo name="chevron-down" size={18} color="#555" />
           </Animated.View>
@@ -119,15 +154,26 @@ export default function Accordion({
         {headerRight}
       </View>
 
-      <Animated.View style={bodyStyle}>
-        {contentHeight === 0 && (
-          <View style={styles.measurer} onLayout={onContentLayout}>
-            <View style={styles.content}>{children}</View>
+      {/* Hidden measurer — always rendered so it re-measures when children change
+        In short: it's an invisible clone of the content whose only job is to tell 
+        you "this content is X pixels tall" so the animation knows where to expand to. 
+        */}
+      <ItemPositionProvider>
+        <View style={styles.measurer} onLayout={onContentLayout}>
+          <View style={styles.content}>
+            {stickyTop}
+            {children}
           </View>
-        )}
-        {contentHeight > 0 && <View style={styles.content}>{children}</View>}
-      </Animated.View>
-    </View>
+        </View>
+
+        <Animated.View style={bodyStyle}>
+          <View style={styles.content}>
+            {stickyTop}
+            {children}
+          </View>
+        </Animated.View>
+      </ItemPositionProvider>
+    </Animated.View>
   );
 }
 
