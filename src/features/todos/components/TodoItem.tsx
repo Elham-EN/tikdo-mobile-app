@@ -1,4 +1,7 @@
-import type { TodoItem as TodoItemType } from "@/features/todos/types";
+import type {
+  ListType,
+  TodoItem as TodoItemType,
+} from "@/features/todos/types";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -9,6 +12,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+import { useDropZones } from "../context/DropZoneContext";
+import { useMoveTodoItemMutation } from "../todosApi";
 
 interface TodoItemProps {
   todo: TodoItemType;
@@ -21,6 +26,30 @@ export default function TodoItem({ todo }: TodoItemProps) {
   const lastHapticY = useSharedValue(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+
+  const dropZones = useDropZones();
+  const [moveTodo] = useMoveTodoItemMutation();
+
+  // Defined in component body (RN Runtime scope) so it can be
+  // safely passed to scheduleOnRN from the UI thread worklet.
+  const handleDrop = (absoluteY: number) => {
+    const zones = dropZones.current;
+    let target: ListType | "trash" | null = null;
+    for (const key in zones) {
+      const zone = zones[key as ListType | "trash"]!;
+      if (absoluteY >= zone.y && absoluteY <= zone.y + zone.height) {
+        target = zone.listType;
+        break;
+      }
+    }
+    if (!target || target === todo.listType) return;
+
+    if (target === "trash") {
+      moveTodo({ id: todo.id, status: "deleted" });
+    } else {
+      moveTodo({ id: todo.id, listType: target });
+    }
+  };
 
   // updates those shared values as the finger moves:
   const panGesture = Gesture.Pan()
@@ -48,7 +77,16 @@ export default function TodoItem({ todo }: TodoItemProps) {
     })
     // fires when the finger lifts. withSpring(0) snaps the item back to
     // its original position (for now — later we'll add drop logic here)
-    .onEnd(() => {
+    .onEnd((event) => {
+      // To detect the target. Capture event.absoluteY (the finger's screen-level Y),
+      // then use scheduleOnRN to run the detection on the JS thread
+      const fingerY = event.absoluteY;
+
+      // Pass handleDrop (defined in RN Runtime scope) and fingerY as
+      // an argument — avoids closure capture issues across runtimes.
+      scheduleOnRN(handleDrop, fingerY);
+
+      // Snap back to original position
       translateX.value = withSpring(0);
       translateY.value = withSpring(0);
       isActive.value = false;

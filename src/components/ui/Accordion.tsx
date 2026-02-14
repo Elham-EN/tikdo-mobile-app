@@ -1,3 +1,5 @@
+import { useDropZones } from "@/features/todos/context/DropZoneContext";
+import { ListType } from "@/features/todos/types";
 import { light_grey } from "@/utils/colors";
 import { Entypo } from "@expo/vector-icons";
 import React, { useRef, useState } from "react";
@@ -25,6 +27,7 @@ interface AccordionProps {
   stickyTop?: React.ReactNode;
   children: React.ReactNode;
   listSize: number;
+  listType: ListType | "trash";
 }
 
 const ANIMATION_DURATION = 300;
@@ -41,14 +44,26 @@ export default function Accordion({
   stickyTop,
   children,
   listSize,
+  listType,
 }: AccordionProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   // A ref is a mutable container that persists across renders.
   const expandedRef = useRef(false);
+  const containerRef = useRef<View>(null);
+
+  const dropZones = useDropZones();
 
   const animatedHeight = useSharedValue(0);
   const rotation = useSharedValue(0);
+
+  const registerBounds = () => {
+    // measureInWindow gives the accordion's position on the actual screen,
+    // which you can directly compare against the finger position.
+    containerRef.current?.measureInWindow((x, y, width, height) => {
+      dropZones.current[listType] = { y, height, listType };
+    });
+  };
 
   const onContentLayout = (event: LayoutChangeEvent) => {
     const height = event.nativeEvent.layout.height;
@@ -96,7 +111,7 @@ export default function Accordion({
   }));
 
   return (
-    <View style={styles.container}>
+    <View ref={containerRef} style={styles.container} onLayout={registerBounds}>
       <View style={styles.headerRow}>
         <Pressable
           style={({ pressed }) => [

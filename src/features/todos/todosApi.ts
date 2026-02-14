@@ -1,5 +1,5 @@
 import { type AddTodoFormInputs } from "@/features/todos/schemas/addTodoSchema";
-import { type TodoItem } from "@/features/todos/types";
+import { type ListType, type TaskStatus, type TodoItem } from "@/features/todos/types";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 // Define a service using a base URL and expected endpoints
@@ -29,7 +29,23 @@ export const todosApi = createApi({
       // This cache provides "TodoList"
       providesTags: ["TodoList"],
     }),
+    // Mutation: Move a todo to a different list or trash it
+    moveTodoItem: builder.mutation<
+      TodoItem,
+      { id: number; listType?: ListType; status?: TaskStatus }
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/${id}/move`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["TodoList"],
+    }),
   }),
 });
 
-export const { useAddTodoItemMutation, useGetTodoItemsQuery } = todosApi;
+export const {
+  useAddTodoItemMutation,
+  useGetTodoItemsQuery,
+  useMoveTodoItemMutation,
+} = todosApi;
