@@ -1,223 +1,330 @@
 // Home screen (Inbox tab) that displays all todo lists in accordion format.
 // Provides the main interface for viewing, organizing, and dragging todos between lists.
-// Wraps everything in DropZoneProvider to enable drag-and-drop functionality.
 
-import Accordion from "@/components/ui/Accordion";
-import AddTodoRow from "@/components/ui/AddTodoRow";
-import FabButton from "@/components/ui/FabButton";
-import PlusButton from "@/components/ui/PlusButton";
-import AddTaskSheet from "@/features/todos/components/AddTaskSheet";
-import TodoItem from "@/features/todos/components/TodoItem";
-import { DropZoneProvider } from "@/features/todos/context/DropZoneContext";
-import { useGetTodoItemsQuery } from "@/features/todos/todosApi";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
 import {
-  filterDeletedTodos,
-  filterTodosByListType,
-} from "@/features/todos/utils/todoFilters";
-import { coral_red, light_grey } from "@/utils/colors";
-import React, { useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  interpolate,
+  Extrapolation,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Task item data structure with title and description
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+}
+
+// Task list category data structure with name and tasks
+interface TaskList {
+  id: string;
+  name: string;
+  tasks: Task[];
+}
+
+// Dummy data for 5 tasks grouped into categories
+const DUMMY_DATA: TaskList[] = [
+  {
+    id: "1",
+    name: "Brain Dump",
+    tasks: [
+      {
+        id: "1",
+        title: "Complete project proposal",
+        description: "Finish the Q1 project proposal and submit to management",
+      },
+      {
+        id: "2",
+        title: "Review code changes",
+        description: "Review pull requests from the development team",
+      },
+    ],
+  },
+  {
+    id: "2",
+    name: "Tody",
+    tasks: [
+      {
+        id: "3",
+        title: "Buy groceries",
+        description: "Get milk, eggs, bread, and vegetables from the store",
+      },
+      {
+        id: "4",
+        title: "Schedule dentist appointment",
+        description: "Call the dentist office to book a checkup appointment",
+      },
+      {
+        id: "5",
+        title: "Plan weekend trip",
+        description: "Research and plan a weekend getaway to the mountains",
+      },
+    ],
+  },
+  {
+    id: "3",
+    name: "upcoming",
+    tasks: [
+      {
+        id: "1",
+        title: "Complete project proposal",
+        description: "Finish the Q1 project proposal and submit to management",
+      },
+      {
+        id: "2",
+        title: "Review code changes",
+        description: "Review pull requests from the development team",
+      },
+    ],
+  },
+  {
+    id: "4",
+    name: "someday",
+    tasks: [
+      {
+        id: "1",
+        title: "Complete project proposal",
+        description: "Finish the Q1 project proposal and submit to management",
+      },
+      {
+        id: "2",
+        title: "Review code changes",
+        description: "Review pull requests from the development team",
+      },
+    ],
+  },
+];
+
+/**
+ * TaskItemRow component displays a single task with title and description.
+ * Shows task metadata in a clean, readable format.
+ *
+ * @param task - The task object containing title and description
+ */
+function TaskItemRow({ task }: { task: Task }): React.ReactElement {
+  return (
+    <View style={styles.taskItem}>
+      {/* Task title - bold and prominent */}
+      <Text style={styles.taskTitle}>{task.title}</Text>
+      {/* Task description - smaller and gray */}
+      <Text style={styles.taskDescription}>{task.description}</Text>
+    </View>
+  );
+}
+
+/**
+ * TaskListView component displays a collapsible list of tasks.
+ * Shows list name on left, chevron icon on right to indicate collapse state.
+ *
+ * @param taskList - The task list object containing name and tasks array
+ */
+function TaskListView({
+  taskList,
+}: {
+  taskList: TaskList;
+}): React.ReactElement {
+  // Track whether this list is expanded or collapsed
+  const [isExpanded, setIsExpanded] = useState(true);
+  // Store the measured height of the content
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // Animated value for chevron rotation (0 = right/collapsed, 90 = down/expanded)
+  const rotation = useSharedValue(90);
+  // Animated value for content progress (0 = collapsed, 1 = expanded)
+  const progress = useSharedValue(1);
+
+  /**
+   * Toggle the expanded/collapsed state of the task list
+   * Animates both the chevron rotation and content visibility
+   */
+  const toggleExpand = () => {
+    // Toggle the expanded state
+    const newExpandedState = !isExpanded;
+    setIsExpanded(newExpandedState);
+
+    // Animate chevron rotation: 90deg when expanded, 0deg when collapsed
+    rotation.value = withTiming(newExpandedState ? 90 : 0, {
+      duration: 300,
+      easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+    });
+
+    // Animate content progress: 1 when expanded, 0 when collapsed
+    progress.value = withTiming(newExpandedState ? 1 : 0, {
+      duration: 300,
+      easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+    });
+  };
+
+  /**
+   * Animated style for chevron icon rotation
+   * Smoothly rotates between 0deg (collapsed) and 90deg (expanded)
+   */
+  const chevronAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${rotation.value}deg` }],
+    };
+  });
+
+  /**
+   * Animated style for task items container
+   * Animates height and opacity using measured content height
+   */
+  const contentAnimatedStyle = useAnimatedStyle(() => {
+    // Interpolate height from 0 to measured content height
+    const animatedHeight = interpolate(
+      progress.value,
+      [0, 1],
+      [0, contentHeight],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      // Animate height from 0 to full content height
+      height: animatedHeight,
+      // Fade opacity from 0 to 1
+      opacity: progress.value,
+      // Prevent overflow during animation
+      overflow: "hidden",
+    };
+  });
+
+  return (
+    <View style={styles.taskListContainer}>
+      {/* Header: List name on left, chevron icon on right */}
+      <TouchableOpacity
+        style={styles.taskListHeader}
+        onPress={toggleExpand}
+        activeOpacity={0.7}
+      >
+        {/* List name text */}
+        <Text style={styles.taskListName}>{taskList.name}</Text>
+        {/* Chevron icon with smooth rotation animation */}
+        <Animated.View style={chevronAnimatedStyle}>
+          <Ionicons name="chevron-forward" size={24} color="#8E8E93" />
+        </Animated.View>
+      </TouchableOpacity>
+
+      {/* Task items with smooth expand/collapse animation */}
+      <Animated.View style={contentAnimatedStyle}>
+        <View
+          style={styles.taskItemsContainer}
+          onLayout={(event) => {
+            // Measure the actual height of the content once it renders
+            const height = event.nativeEvent.layout.height;
+            if (height > 0 && contentHeight !== height) {
+              setContentHeight(height);
+            }
+          }}
+        >
+          {taskList.tasks.map((task) => (
+            <TaskItemRow key={task.id} task={task} />
+          ))}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
 
 /**
  * Home screen component that displays todo lists organized in accordions.
  *
- * Features:
- * - Receiving Area: Brain Dump (inbox) for unprocessed thoughts
- * - Organize Area: Today, Upcoming, Someday lists for categorized todos
- * - Trash: Deleted items
- * - Drag & drop: Items can be dragged between accordions
- * - FAB button: Opens bottom sheet to add new todos
+ * FAB button: Opens bottom sheet to add new todos
  */
 export default function Index(): React.ReactElement {
   // Get safe area insets to avoid notch/status bar overlap
   const insets = useSafeAreaInsets();
 
-  // Controls visibility of the add task bottom sheet
-  const [isSheetVisible, setIsSheetVisible] = useState(false);
-
-  // Fetch all todos from Redux store (RTK Query)
-  const { data: todos = [], isLoading } = useGetTodoItemsQuery();
-
-  // Reference to ScrollView for potential programmatic scrolling
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  // Filter todos by list type using utility functions (eliminates repetition)
-  const inboxes = filterTodosByListType(todos, "inbox");
-  const todayItems = filterTodosByListType(todos, "today");
-  const upcomingItems = filterTodosByListType(todos, "upcoming");
-  const somedayItems = filterTodosByListType(todos, "someday");
-
-  // Filter deleted items for trash accordion
-  const trashedItems = filterDeletedTodos(todos);
-
   return (
-    // DropZoneProvider enables drag-and-drop by tracking accordion positions
-    // All accordions register themselves as drop zones within this context
-    <DropZoneProvider>
-      {/* Main container view */}
-      <View style={{ flex: 1 }}>
-        {/* Scrollable content area for all accordions */}
-        <ScrollView
-          ref={scrollViewRef}
-          // Padding top to avoid status bar overlap
-          style={[styles.container, { paddingTop: insets.top }]}
-          contentContainerStyle={[
-            styles.scrollContent,
-            // Extra 100px bottom padding to ensure FAB doesn't cover last items
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          // Hide vertical scroll indicator for cleaner UI
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Receiving Area Section: Brain Dump (Inbox) */}
-          <View style={styles.section}>
-            {/* Section header text */}
-            <Text style={styles.headerText}>Receiving Area (Inbox)</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header text */}
+      <Text style={styles.header}>Inbox Screen</Text>
 
-            {/* Brain Dump accordion for unprocessed thoughts */}
-            <Accordion
-              title="Brain Dump"
-              icon={require("../../../assets/icons/brain.png")}
-              bgColor={light_grey}
-              headerRight={<PlusButton onPress={() => {}} />}
-              // Sticky input row at top of accordion for quick adds
-              stickyTop={
-                inboxes.length > 0 ? null : (
-                  <AddTodoRow placeholder="Unprocessed thought - add here" />
-                )
-              }
-              // Number of items in this list (for badge display)
-              listSize={inboxes.length}
-              // List type identifier for drag-and-drop targeting
-              listType="inbox"
-            >
-              {/* Show loading state while fetching todos */}
-              {isLoading ? (
-                <Text>Loading todos...</Text>
-              ) : (
-                // Render each inbox todo item with index for position tracking
-                inboxes.map((todo, index) => (
-                  <TodoItem key={todo.id} todo={todo} index={index} />
-                ))
-              )}
-            </Accordion>
-          </View>
-
-          {/* Organize Section: Today, Upcoming, Someday, Trash */}
-          <View style={styles.section}>
-            {/* Section header text */}
-            <Text style={styles.headerText}>Organize your to-do</Text>
-            {/* Today accordion for tasks to complete today */}
-            <Accordion
-              title="Today"
-              icon={require("../../../assets/icons/sun.png")}
-              bgColor={light_grey}
-              headerRight={<PlusButton onPress={() => {}} />}
-              stickyTop={
-                todayItems.length > 0 ? null : (
-                  <AddTodoRow placeholder="Get it done today - add here" />
-                )
-              }
-              listSize={todayItems.length}
-              listType="today"
-            >
-              {/* Render each today todo item */}
-              {todayItems.map((todo, index) => (
-                <TodoItem key={todo.id} todo={todo} index={index} />
-              ))}
-            </Accordion>
-
-            {/* Upcoming accordion for future tasks */}
-            <Accordion
-              title="Upcoming"
-              icon={require("../../../assets/icons/upcoming.png")}
-              bgColor={light_grey}
-              headerRight={<PlusButton onPress={() => {}} />}
-              stickyTop={
-                upcomingItems.length > 0 ? null : (
-                  <AddTodoRow placeholder="Planning ahead - add here" />
-                )
-              }
-              listSize={upcomingItems.length}
-              listType="upcoming"
-            >
-              {/* Render each upcoming todo item */}
-              {upcomingItems.map((todo, index) => (
-                <TodoItem key={todo.id} todo={todo} index={index} />
-              ))}
-            </Accordion>
-
-            {/* Someday accordion for tasks without specific timeline */}
-            <Accordion
-              title="Someday"
-              icon={require("../../../assets/icons/box.png")}
-              bgColor={light_grey}
-              headerRight={<PlusButton onPress={() => {}} />}
-              stickyTop={
-                somedayItems.length > 0 ? null : (
-                  <AddTodoRow placeholder="Not Sure When? - add here" />
-                )
-              }
-              listSize={somedayItems.length}
-              listType="someday"
-            >
-              {/* Render each someday todo item */}
-              {somedayItems.map((todo, index) => (
-                <TodoItem key={todo.id} todo={todo} index={index} />
-              ))}
-            </Accordion>
-
-            {/* Trash accordion for deleted items (red background) */}
-            <Accordion
-              title="Trash"
-              icon={require("../../../assets/icons/trash.png")}
-              bgColor={coral_red}
-              stickyTop={<AddTodoRow placeholder="Trashed items here" />}
-              listSize={trashedItems.length}
-              listType="trash"
-            >
-              {/* Render each trashed todo item */}
-              {trashedItems.map((todo, index) => (
-                <TodoItem key={todo.id} todo={todo} index={index} />
-              ))}
-            </Accordion>
-          </View>
-        </ScrollView>
-
-        {/* Floating Action Button (FAB) to open add task sheet */}
-        <FabButton onPress={() => setIsSheetVisible(true)} />
-
-        {/* Bottom sheet for adding new tasks */}
-        <AddTaskSheet
-          visible={isSheetVisible}
-          onClose={() => setIsSheetVisible(false)}
-        />
-      </View>
-    </DropZoneProvider>
+      {/* Scrollable list of task lists */}
+      <ScrollView style={styles.scrollView}>
+        {DUMMY_DATA.map((taskList) => (
+          <TaskListView key={taskList.id} taskList={taskList} />
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
 // Styles for the home screen layout
 const styles = StyleSheet.create({
-  // Main container style for ScrollView
+  // Main container with light gray background
   container: {
-    flex: 1, // Fill available space
-    paddingHorizontal: 16, // Horizontal padding for content spacing
+    flex: 1,
+    backgroundColor: "#F8F8F8",
   },
-  // Content container for items inside ScrollView
-  scrollContent: {
-    gap: 24, // Vertical spacing between sections (Receiving Area, Organize Area)
+  // Header text styling
+  header: {
+    fontSize: 20,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: "#1C1C1E",
   },
-  // Section container for grouping accordions
-  section: {
-    gap: 12, // Vertical spacing between section header and accordions
+  // Scrollable area for task lists
+  scrollView: {
+    flex: 1,
   },
-  // Header text style for section titles
-  headerText: {
-    fontFamily: "BalsamiqSans-Regular", // Custom handwritten font
-    fontWeight: "400", // Normal weight
-    fontSize: 24, // Large font size for section headers
-    textAlign: "center", // Center align section titles
+  // Container for each task list (category)
+  taskListContainer: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  // Header row with list name and chevron icon
+  taskListHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  // List name text styling
+  taskListName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1C1C1E",
+  },
+  // Container for all task items in a list
+  taskItemsContainer: {
+    paddingTop: 4,
+  },
+  // Individual task item row
+  taskItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
+  },
+  // Task title text styling
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1C1C1E",
+    marginBottom: 4,
+  },
+  // Task description text styling
+  taskDescription: {
+    fontSize: 14,
+    color: "#8E8E93",
+    lineHeight: 20,
   },
 });
