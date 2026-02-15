@@ -3,7 +3,10 @@
 // and visual feedback when items are dragged over it. Wraps children in ItemPositionProvider
 // to enable sibling item position tracking for drag-and-drop insertion calculations.
 
-import { useActiveDropZone, useDropZones } from "@/features/todos/context/DropZoneContext";
+import {
+  useActiveDropZone,
+  useDropZones,
+} from "@/features/todos/context/DropZoneContext";
 import { ItemPositionProvider } from "@/features/todos/context/ItemPositionContext";
 import { ListType } from "@/features/todos/types";
 import { light_grey } from "@/utils/colors";
@@ -157,7 +160,7 @@ export default function Accordion({
     // Animate height: 0 (collapsed) to contentHeight (expanded)
     animatedHeight.value = withTiming(
       willExpand ? contentHeight : 0,
-      timingConfig
+      timingConfig,
     );
 
     // Animate chevron rotation: 0° (down) to 180° (up)
@@ -194,17 +197,21 @@ export default function Accordion({
               1, // Progress value (1 = fully transitioned)
               [0, 1], // Input range
               // Output range: white to light red (trash) or light blue (lists)
-              ["#FFFFFF", listType === "trash" ? HOVER_BG_TRASH : HOVER_BG_LIST]
+              [
+                "#FFFFFF",
+                listType === "trash" ? HOVER_BG_TRASH : HOVER_BG_LIST,
+              ],
             )
           : "#FFFFFF", // Not hovered: white background
-        { duration: 200 } // Smooth 200ms transition
+        { duration: 200 }, // Smooth 200ms transition
       ),
       // Animate border radius: 0 normally, 12 when hovered (rounded corners)
       borderRadius: withTiming(isHovered ? 12 : 0, { duration: 200 }),
       // Animate border width: 0 normally, 2 when hovered (visible border)
       borderWidth: withTiming(isHovered ? 2 : 0, { duration: 200 }),
       // Border color: red for trash, blue for regular lists
-      borderColor: listType === "trash" ? BORDER_COLOR_TRASH : BORDER_COLOR_LIST,
+      borderColor:
+        listType === "trash" ? BORDER_COLOR_TRASH : BORDER_COLOR_LIST,
     };
   });
 
