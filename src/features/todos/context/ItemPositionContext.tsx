@@ -1,3 +1,7 @@
+// Context for tracking todo item positions and shift animations during drag-and-drop.
+// Allows dragged items to calculate insertion index by comparing against sibling positions
+// and animate siblings by updating their shift values.
+
 /**
  * Each TodoItem needs to know where its siblings are on screen so it can
  * calculate the insertion index during drag. A shared ref (like

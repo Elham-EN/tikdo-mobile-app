@@ -1,3 +1,7 @@
+// Context for tracking accordion drop zone positions during drag-and-drop.
+// Allows TodoItem components to detect which accordion they're being dragged over
+// by sharing accordion screen positions across the component tree.
+
 /**
  * Here's the challenge:
  * When a TodoItem is dropped, it needs to know the screen positions
