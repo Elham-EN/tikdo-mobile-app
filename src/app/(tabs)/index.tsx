@@ -83,7 +83,9 @@ export default function Index(): React.ReactElement {
               headerRight={<PlusButton onPress={() => {}} />}
               // Sticky input row at top of accordion for quick adds
               stickyTop={
-                <AddTodoRow placeholder="Unprocessed thought - add here" />
+                inboxes.length > 0 ? null : (
+                  <AddTodoRow placeholder="Unprocessed thought - add here" />
+                )
               }
               // Number of items in this list (for badge display)
               listSize={inboxes.length}
@@ -113,7 +115,9 @@ export default function Index(): React.ReactElement {
               bgColor={light_grey}
               headerRight={<PlusButton onPress={() => {}} />}
               stickyTop={
-                <AddTodoRow placeholder="Get it done today - add here" />
+                todayItems.length > 0 ? null : (
+                  <AddTodoRow placeholder="Get it done today - add here" />
+                )
               }
               listSize={todayItems.length}
               listType="today"
@@ -130,7 +134,11 @@ export default function Index(): React.ReactElement {
               icon={require("../../../assets/icons/upcoming.png")}
               bgColor={light_grey}
               headerRight={<PlusButton onPress={() => {}} />}
-              stickyTop={<AddTodoRow placeholder="Planning ahead - add here" />}
+              stickyTop={
+                upcomingItems.length > 0 ? null : (
+                  <AddTodoRow placeholder="Planning ahead - add here" />
+                )
+              }
               listSize={upcomingItems.length}
               listType="upcoming"
             >
@@ -146,7 +154,11 @@ export default function Index(): React.ReactElement {
               icon={require("../../../assets/icons/box.png")}
               bgColor={light_grey}
               headerRight={<PlusButton onPress={() => {}} />}
-              stickyTop={<AddTodoRow placeholder="Not Sure When? - add here" />}
+              stickyTop={
+                somedayItems.length > 0 ? null : (
+                  <AddTodoRow placeholder="Not Sure When? - add here" />
+                )
+              }
               listSize={somedayItems.length}
               listType="someday"
             >
