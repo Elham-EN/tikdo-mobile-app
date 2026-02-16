@@ -260,8 +260,11 @@ export default function Index(): React.ReactElement {
       {/* Header text */}
       <Text style={styles.header}>Inbox Screen</Text>
 
-      {/* Scrollable list of task lists */}
-      <ScrollView style={styles.scrollView}>
+      {/* Scrollable list of task lists, extra bottom padding to clear native tab bar */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 50 }}
+      >
         {DUMMY_DATA.map((taskList) => (
           <TaskListView key={taskList.id} taskList={taskList} />
         ))}
@@ -302,8 +305,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: "#FFFFFF",
   },
 
