@@ -1,6 +1,7 @@
 // Home screen (Inbox tab) that displays all todo lists in accordion format.
 // Provides the main interface for viewing, organizing, and dragging todos between lists.
 
+import { mutated_apricot } from "@/utils/colors";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -12,11 +13,11 @@ import {
 } from "react-native";
 import Animated, {
   Easing,
+  Extrapolation,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  interpolate,
-  Extrapolation,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -31,6 +32,7 @@ interface Task {
 interface TaskList {
   id: string;
   name: string;
+  iconName: keyof typeof Ionicons.glyphMap;
   tasks: Task[];
 }
 
@@ -39,6 +41,7 @@ const DUMMY_DATA: TaskList[] = [
   {
     id: "1",
     name: "Brain Dump",
+    iconName: "archive-outline",
     tasks: [
       {
         id: "1",
@@ -54,7 +57,8 @@ const DUMMY_DATA: TaskList[] = [
   },
   {
     id: "2",
-    name: "Tody",
+    name: "Today",
+    iconName: "sunny-outline",
     tasks: [
       {
         id: "3",
@@ -75,7 +79,8 @@ const DUMMY_DATA: TaskList[] = [
   },
   {
     id: "3",
-    name: "upcoming",
+    name: "Upcoming",
+    iconName: "calendar-number-outline",
     tasks: [
       {
         id: "1",
@@ -91,7 +96,8 @@ const DUMMY_DATA: TaskList[] = [
   },
   {
     id: "4",
-    name: "someday",
+    name: "Someday",
+    iconName: "albums-outline",
     tasks: [
       {
         id: "1",
@@ -187,7 +193,7 @@ function TaskListView({
       progress.value,
       [0, 1],
       [0, contentHeight],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     );
 
     return {
@@ -209,7 +215,10 @@ function TaskListView({
         activeOpacity={0.7}
       >
         {/* List name text */}
-        <Text style={styles.taskListName}>{taskList.name}</Text>
+        <View style={styles.listTypeContainer}>
+          <Ionicons name={taskList.iconName} size={24} />
+          <Text style={styles.taskListName}>{taskList.name}</Text>
+        </View>
         {/* Chevron icon with smooth rotation animation */}
         <Animated.View style={chevronAnimatedStyle}>
           <Ionicons name="chevron-forward" size={24} color="#8E8E93" />
@@ -297,9 +306,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: "#FFFFFF",
   },
+
+  // List Type Container
+  listTypeContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: mutated_apricot,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+  },
+
   // List name text styling
   taskListName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "600",
     color: "#1C1C1E",
   },
