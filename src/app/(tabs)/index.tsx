@@ -219,10 +219,14 @@ function TaskListView({
           <Ionicons name={taskList.iconName} size={24} />
           <Text style={styles.taskListName}>{taskList.name}</Text>
         </View>
-        {/* Chevron icon with smooth rotation animation */}
-        <Animated.View style={chevronAnimatedStyle}>
-          <Ionicons name="chevron-forward" size={24} color="#8E8E93" />
-        </Animated.View>
+        <View style={styles.listLengthContainer}>
+          {/* List Length */}
+          <Text>{40}</Text>
+          {/* Chevron icon with smooth rotation animation */}
+          <Animated.View style={chevronAnimatedStyle}>
+            <Ionicons name="chevron-forward" size={24} color="#8E8E93" />
+          </Animated.View>
+        </View>
       </TouchableOpacity>
 
       {/* Task items with smooth expand/collapse animation */}
@@ -299,6 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     overflow: "hidden",
+    paddingVertical: 5,
   },
   // Header row with list name and chevron icon
   taskListHeader: {
@@ -322,6 +327,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
 
+  listLengthContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+
   // List name text styling
   taskListName: {
     fontSize: 14,
@@ -336,8 +348,8 @@ const styles = StyleSheet.create({
   taskItem: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5EA",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
   },
   // Task title text styling
   taskTitle: {
