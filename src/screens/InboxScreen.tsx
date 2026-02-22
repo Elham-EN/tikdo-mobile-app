@@ -1,3 +1,5 @@
+// InboxScreen — main home screen showing all todo lists in accordion format.
+// Handles layout, list rendering, FAB placement, and scroll padding above the tab bar.
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
 import FabButton from "@/components/ui/FabButton";
 import { lists } from "@/data/data";
@@ -33,7 +35,11 @@ function InboxScreen({ tasks }: Props): React.ReactElement {
 
       {/* DragScrollView pre-wires scrollViewRef, scrollEnabled, and currentScrollY
           from the drag context so auto-scroll and hit-test correction work */}
-      <DragScrollView>
+      {/* paddingBottom = tab bar (49) + safe area bottom + FAB height (60) + gap (16) 
+      so the last list clears the FAB */}
+      <DragScrollView
+        contentContainerStyle={{ paddingBottom: 49 + insets.bottom + 76 }}
+      >
         {lists.map((list) => (
           <DragList
             key={list.listId}
