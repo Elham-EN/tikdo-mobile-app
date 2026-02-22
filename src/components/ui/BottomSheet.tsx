@@ -76,7 +76,7 @@ export default function BottomSheet({
         },
       );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]); // translateY and overlayOpacity are stable refs — safe to omit
 
   /**
@@ -88,7 +88,7 @@ export default function BottomSheet({
       overlayOpacity.value = withTiming(1, TIMING_CONFIG); // Fade backdrop in
       translateY.value = withTiming(0, TIMING_CONFIG); // Slide sheet up into view
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]); // Runs when mounted flips to true — visible is stable at this point
 
   // Animated style for the backdrop — multiplied by 0.5 so max visible opacity is 50%
@@ -106,7 +106,12 @@ export default function BottomSheet({
 
   return (
     // transparent Modal renders above all native UI including the tab bar
-    <Modal transparent statusBarTranslucent animationType="none" visible={mounted}>
+    <Modal
+      transparent
+      statusBarTranslucent
+      animationType="none"
+      visible={mounted}
+    >
       {/* Dark backdrop — fills the Modal; tapping it calls onClose to dismiss */}
       <Animated.View style={[styles.overlay, overlayStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
