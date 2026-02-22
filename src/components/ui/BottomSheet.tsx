@@ -12,6 +12,7 @@ import {
   StyleSheet,
 } from "react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -52,6 +53,18 @@ export default function BottomSheet({
 
   // Controls whether the Modal is in the tree — stays true until close animation finishes
   const [mounted, setMounted] = React.useState(false);
+
+  /**
+   * Cleanup — cancels running animations on unmount (e.g. during reload).
+   * Prevents stale worklet callbacks from calling scheduleOnRN into a destroyed RN Runtime.
+   */
+  React.useEffect(() => {
+    return () => {
+      cancelAnimation(translateY);
+      cancelAnimation(overlayOpacity);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Runs only on unmount
 
   /**
    * Step 1 — controls mounting and close animation.
