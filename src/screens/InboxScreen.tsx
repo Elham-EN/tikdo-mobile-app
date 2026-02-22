@@ -1,6 +1,7 @@
 // InboxScreen — main home screen showing all todo lists in accordion format.
 // Handles layout, list rendering, FAB placement, and scroll padding above the tab bar.
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
+import AddTaskSheet from "@/components/ui/AddTodoItem";
 import FabButton from "@/components/ui/FabButton";
 import { lists } from "@/data/data";
 import { TaskItem } from "@/types/todoItem.types";
@@ -20,6 +21,7 @@ interface Props {
  */
 // ─── Inner screen content — needs context so DragScrollView can read scrollViewRef
 function InboxScreen({ tasks }: Props): React.ReactElement {
+  const [isSheetVisible, setIsSheetVisible] = React.useState(false);
   const insets = useSafeAreaInsets();
 
   // Returns tasks for a given list, sorted by order field
@@ -53,7 +55,11 @@ function InboxScreen({ tasks }: Props): React.ReactElement {
 
       {/* Ghost rendered above everything — outside the ScrollView so it isn't clipped */}
       <DragGhost />
-      <FabButton onPress={() => {}} />
+      <FabButton onPress={() => setIsSheetVisible(true)} />
+      <AddTaskSheet
+        visible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+      />
     </View>
   );
 }
