@@ -38,7 +38,7 @@ function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView>
       <Stack screenOptions={{ headerShown: false }} />
     </GestureHandlerRootView>
   );
