@@ -1,4 +1,5 @@
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
+import FabButton from "@/components/ui/FabButton";
 import { lists } from "@/data/data";
 import { TaskItem } from "@/types/todoItem.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -46,6 +47,7 @@ function InboxScreen({ tasks }: Props): React.ReactElement {
 
       {/* Ghost rendered above everything — outside the ScrollView so it isn't clipped */}
       <DragGhost />
+      <FabButton onPress={() => {}} />
     </View>
   );
 }
