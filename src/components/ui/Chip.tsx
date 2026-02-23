@@ -11,6 +11,7 @@ import { StyleSheet, Text, TouchableOpacity } from "react-native";
 interface ChipProps {
   title?: string;
   icon: ReactNode;
+  trailingIcon?: ReactNode; // Optional icon rendered after the title (e.g. chevron)
   bgColor?: string;
   textColor?: string;
   onPress?: () => void;
@@ -19,6 +20,7 @@ interface ChipProps {
 function Chip({
   title,
   icon,
+  trailingIcon,
   bgColor = dark_chip,
   textColor = "#ccc",
   onPress,
@@ -34,7 +36,10 @@ function Chip({
       onPress={onPress}
     >
       {icon}
-      {title && <Text style={[styles.chipText, { color: textColor }]}>{title}</Text>}
+      {title && (
+        <Text style={[styles.chipText, { color: textColor }]}>{title}</Text>
+      )}
+      {trailingIcon}
     </TouchableOpacity>
   );
 }
@@ -46,7 +51,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
   },
   iconOnly: {
     paddingHorizontal: 12,

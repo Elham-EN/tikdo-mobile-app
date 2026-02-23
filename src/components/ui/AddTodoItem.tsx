@@ -1,15 +1,20 @@
 // AddTaskSheet — bottom sheet form for creating a new todo item.
 // Contains a title input (auto-focused to open keyboard), description input,
 // and a bottom row with inbox selector and send button.
-import { brand, light_chip, light_surface } from "@/utils/colors";
+import { lists } from "@/data/data";
+import { TaskItem } from "@/types/todoItem.types";
+import { brand, light_surface } from "@/utils/colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
 import React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import BottomSheet from "./BottomSheet";
+import ListPickerDropdown from "./ListPickerDropdown";
 
 interface AddTaskSheetProps {
   visible: boolean; // Whether the sheet is shown
   onClose: () => void; // Called when user dismisses the sheet
+  onAddTask: (task: TaskItem) => void; // Called with the new task when user submits
 }
 
 /**
@@ -19,12 +24,16 @@ interface AddTaskSheetProps {
 export default function AddTaskSheet({
   visible,
   onClose,
+  onAddTask,
 }: AddTaskSheetProps): React.ReactElement {
   // Controlled state for the task title input
   const [title, setTitle] = React.useState("");
 
   // Controlled state for the task description input
   const [description, setDescription] = React.useState("");
+
+  // Tracks which list the task will be added to (defaults to Inbox)
+  const [selectedListId, setSelectedListId] = React.useState(lists[0].listId);
 
   // Ref to auto-focus the title input when the sheet mounts
   const titleRef = React.useRef<TextInput>(null);
@@ -47,9 +56,20 @@ export default function AddTaskSheet({
   function handleSend() {
     if (!title.trim()) return; // Don't submit empty tasks
 
-    // TODO: actually create the task her
+    // Build a new task with a unique ID based on current timestamp
+    const newTask: TaskItem = {
+      taskId: `task_${Date.now()}`,
+      listId: selectedListId,
+      order: 0, // Placeholder — parent overwrites this to place the task at the top
+      title: title.trim(),
+      description: description.trim(),
+    };
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Confirm task was added
+    onAddTask(newTask); // Pass the new task up to the parent
     setTitle(""); // Reset title for next use
     setDescription(""); // Reset description for next use
+    setSelectedListId(lists[0].listId); // Reset list to Inbox
     onClose(); // Dismiss the sheet
   }
 
@@ -76,14 +96,13 @@ export default function AddTaskSheet({
           multiline // Allows multiple lines for longer descriptions
         />
 
-        {/* Bottom row — inbox selector on the left, send button on the right */}
+        {/* Bottom row — list picker on the left, send button on the right */}
         <View style={styles.bottomRow}>
-          {/* Inbox selector chip — shows which list the task goes into */}
-          <Pressable style={styles.inboxChip}>
-            <Ionicons name="file-tray-outline" size={18} color="#333" />
-            <Text style={styles.inboxText}>Inbox</Text>
-            <Ionicons name="chevron-down" size={14} color="#666" />
-          </Pressable>
+          {/* List picker dropdown — chip + floating menu */}
+          <ListPickerDropdown
+            selectedListId={selectedListId}
+            onSelect={setSelectedListId}
+          />
 
           {/* Send button — submits the task; blue circle with arrow icon */}
           <Pressable
@@ -126,28 +145,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginBottom: 16,
   },
-  // Bottom row — flexes inbox chip left and send button right
+  // Bottom row — flexes list picker left and send button right
   bottomRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 8,
-  },
-  // Inbox chip — pill-shaped selector showing the target list
-  inboxChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: light_chip,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6, // Space between icon, text, and chevron
-  },
-  // Inbox chip label text
-  inboxText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
   },
   // Send button — circular blue button on the right
   sendButton: {
