@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Props {
   tasks: TaskItem[];
+  onAddTask: (task: TaskItem) => void; // Called when user submits a new task
 }
 
 /**
@@ -20,7 +21,7 @@ interface Props {
  * FAB button: Opens bottom sheet to add new todos
  */
 // ─── Inner screen content — needs context so DragScrollView can read scrollViewRef
-function InboxScreen({ tasks }: Props): React.ReactElement {
+function InboxScreen({ tasks, onAddTask }: Props): React.ReactElement {
   const [isSheetVisible, setIsSheetVisible] = React.useState(false);
   const insets = useSafeAreaInsets();
 
@@ -59,6 +60,7 @@ function InboxScreen({ tasks }: Props): React.ReactElement {
       <AddTaskSheet
         visible={isSheetVisible}
         onClose={() => setIsSheetVisible(false)}
+        onAddTask={onAddTask}
       />
     </View>
   );

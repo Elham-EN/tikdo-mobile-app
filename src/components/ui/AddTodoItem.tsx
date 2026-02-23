@@ -2,8 +2,10 @@
 // Contains a title input (auto-focused to open keyboard), description input,
 // and a bottom row with inbox selector and send button.
 import { lists } from "@/data/data";
+import { TaskItem } from "@/types/todoItem.types";
 import { brand, light_surface } from "@/utils/colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import BottomSheet from "./BottomSheet";
@@ -12,6 +14,7 @@ import ListPickerDropdown from "./ListPickerDropdown";
 interface AddTaskSheetProps {
   visible: boolean; // Whether the sheet is shown
   onClose: () => void; // Called when user dismisses the sheet
+  onAddTask: (task: TaskItem) => void; // Called with the new task when user submits
 }
 
 /**
@@ -21,6 +24,7 @@ interface AddTaskSheetProps {
 export default function AddTaskSheet({
   visible,
   onClose,
+  onAddTask,
 }: AddTaskSheetProps): React.ReactElement {
   // Controlled state for the task title input
   const [title, setTitle] = React.useState("");
@@ -52,7 +56,17 @@ export default function AddTaskSheet({
   function handleSend() {
     if (!title.trim()) return; // Don't submit empty tasks
 
-    // TODO: actually create the task here
+    // Build a new task with a unique ID based on current timestamp
+    const newTask: TaskItem = {
+      taskId: `task_${Date.now()}`,
+      listId: selectedListId,
+      order: 0, // Placeholder — parent overwrites this to place the task at the top
+      title: title.trim(),
+      description: description.trim(),
+    };
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Confirm task was added
+    onAddTask(newTask); // Pass the new task up to the parent
     setTitle(""); // Reset title for next use
     setDescription(""); // Reset description for next use
     setSelectedListId(lists[0].listId); // Reset list to Inbox
