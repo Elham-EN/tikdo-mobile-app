@@ -1,10 +1,34 @@
 // DragContext — owns all shared drag state (shared values) and the layout registry.
 // Every component reads from and writes to these values during a drag.
 // Generic over T so users can extend DragItem with their own fields.
+// Also owns the pending-drop intercept so drops to the Today list can be
+// confirmed with scheduling data before being committed to state.
 import { DragItem, ItemLayout, ListLayout } from "@/types/dnd.types";
+import { TaskItem } from "@/types/todoItem.types";
 import * as React from "react";
 import type Animated from "react-native-reanimated";
 import { useAnimatedRef, useSharedValue } from "react-native-reanimated";
+
+// The listId of the "Today" list — drops to this list are intercepted for scheduling
+const TODAY_LIST_ID = "listToday002";
+
+// The virtual section IDs used by the Today tab for its four time sections.
+// Drops between these sections are intercepted for rescheduling.
+const TODAY_SECTION_IDS = new Set([
+  "todaySection_anytime",
+  "todaySection_morning",
+  "todaySection_afternoon",
+  "todaySection_evening",
+]);
+
+// Holds the four drop parameters saved when a Today drop is intercepted.
+// Stored until the user confirms or cancels the scheduling sheet.
+type PendingDrop = {
+  sourceTaskId: string; // The task being moved
+  sourceListId: string; // Where it came from
+  targetListId: string; // Always the Today list when pending
+  targetSlot: string; // hitTest slot key: taskId to insert before, or "end:<listId>"
+};
 
 // Everything the drag engine and child components need, passed via context
 export type DragContextValue = {
@@ -51,6 +75,24 @@ export type DragContextValue = {
     // or "end:<listId>" when inserting after the last item.
     targetSlot: string,
   ) => void;
+
+  // --- Today drop scheduling intercept ---
+  // The drop that is awaiting scheduling confirmation; null when no drop is pending.
+  // Non-null means the scheduling sheet should be open.
+  pendingDrop: PendingDrop | null;
+
+  // Finalises a pending drop by applying edited text + scheduling fields and running the state mutation.
+  // Called by TodayScheduleSheet when the user presses Confirm.
+  confirmPendingDrop: (
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: TaskItem["timeSlot"],
+  ) => void;
+
+  // Discards the pending drop — no state changes, task stays in its original list.
+  // Called by TodayScheduleSheet on Cancel or backdrop tap.
+  cancelPendingDrop: () => void;
 };
 
 // The context — undefined until the provider mounts
@@ -62,16 +104,25 @@ const DragContext = React.createContext<DragContextValue | undefined>(
 type DragProviderProps<T extends DragItem> = {
   children: React.ReactNode;
   setTasks: React.Dispatch<React.SetStateAction<T[]>>;
+  // Optional callback fired when a drop to Today is intercepted.
+  // Parent uses this signal to open the scheduling sheet.
+  onTodayDropPending?: () => void;
+  // Optional callback fired when a task is dragged from one Today section to another.
+  // Receives the target section ID so the parent can pre-select the right time range.
+  onSectionDropPending?: (targetSectionId: string) => void;
 };
 
 /**
  * DragProvider wraps the whole screen and creates all shared values.
  * Pass setTasks down so commitDrop can update React state after a drop.
  * Generic over T so the setTasks updater can work with extended item types.
+ * Pass onTodayDropPending to be notified when a Today drop needs scheduling.
  */
 export function DragProvider<T extends DragItem>({
   children,
   setTasks,
+  onTodayDropPending,
+  onSectionDropPending,
 }: DragProviderProps<T>) {
   // --- Drag identity ---
   const isDragging = useSharedValue(false);
@@ -104,23 +155,38 @@ export function DragProvider<T extends DragItem>({
   const ghostTitle = useSharedValue("");
   const ghostDescription = useSharedValue("");
 
+  // Holds the intercepted Today drop until the user confirms or cancels scheduling.
+  // null = no pending drop; non-null = scheduling sheet should be visible.
+  const [pendingDrop, setPendingDrop] = React.useState<PendingDrop | null>(
+    null,
+  );
+
   /**
-   * Commits a completed drop to React state.
-   * Handles both same-list reorder and cross-list move in one atomic setTasks call.
-   * Called from the RN thread via scheduleOnRN after the drop animation finishes.
+   * Executes the actual tasks state mutation for a completed drop.
+   * Extracted from commitDrop so confirmPendingDrop can call it separately
+   * after the user has provided scheduling data.
    *
-   * Uses the .order field (React state) as the source of truth for item ordering,
-   * NOT pageY positions from the layout registry (which can be stale after reorders).
+   * Uses the .order field (React state) as the source of truth for item ordering.
    * The targetSlot (taskId or "end:<listId>") was computed by hitTest on the UI thread
-   * and identifies which item to insert before — this is always reliable because
-   * hitTest uses live pageY values at the moment of the drop.
+   * and identifies which item to insert before.
+   *
+   * An optional schedulingPatch is applied to the moved task when moving to Today,
+   * saving the user's chosen scheduledTime and timeSlot directly onto the task.
    */
-  function commitDrop(
+  function executeCommit(
     sourceTaskId: string,
     sourceListId: string,
     targetListId: string,
     // Slot key from hitTest: taskId of item to insert BEFORE, or "end:<listId>"
     targetSlot: string,
+    // Optional patch applied to the moved task — only used for Today drops.
+    // Includes edited title/description and the user's scheduling choice.
+    todayPatch?: {
+      title: string;
+      description: string;
+      scheduledTime: string | null;
+      timeSlot: TaskItem["timeSlot"];
+    },
   ) {
     setTasks((prevTasks) => {
       // Work on a shallow copy so we don't mutate state directly
@@ -159,11 +225,40 @@ export function DragProvider<T extends DragItem>({
         });
       } else {
         // --- CROSS-LIST MOVE ---
-        // 1. Move the dragged task to the target list
         const draggedGlobalIdx = updated.findIndex(
           (t) => t.taskId === sourceTaskId,
         );
-        updated[draggedGlobalIdx].listId = targetListId;
+
+        // For cross-section Today moves, keep listId as TODAY_LIST_ID —
+        // the task stays in Today, only its timeSlot changes.
+        // For all other cross-list moves, update listId to the target list.
+        const isSectionMove =
+          TODAY_SECTION_IDS.has(sourceListId) &&
+          TODAY_SECTION_IDS.has(targetListId);
+        if (!isSectionMove) {
+          updated[draggedGlobalIdx].listId = targetListId; // Real list move
+        }
+
+        // If the task is leaving the Today list (or a Today section) and going to a
+        // regular inbox list, clear scheduling metadata so no pill is shown on the item.
+        const isLeavingToday =
+          (sourceListId === TODAY_LIST_ID || TODAY_SECTION_IDS.has(sourceListId)) &&
+          targetListId !== TODAY_LIST_ID &&
+          !TODAY_SECTION_IDS.has(targetListId);
+        if (isLeavingToday) {
+          const task = updated[draggedGlobalIdx] as TaskItem;
+          task.scheduledTime = undefined; // Strip the picked time — item is no longer scheduled
+          task.timeSlot = undefined; // Strip the time bucket — pill should not appear
+        }
+
+        // Apply scheduling patch — for Today inbox drops and Today section moves
+        if (todayPatch) {
+          const task = updated[draggedGlobalIdx] as TaskItem;
+          task.title = todayPatch.title; // User may have edited the title
+          task.description = todayPatch.description; // User may have edited the description
+          task.scheduledTime = todayPatch.scheduledTime; // Chosen time or null for Anytime
+          task.timeSlot = todayPatch.timeSlot; // Time-of-day bucket
+        }
 
         // 2. Re-index the source list (dragged item is now gone from it)
         const sourceRemaining = byOrder(
@@ -201,6 +296,94 @@ export function DragProvider<T extends DragItem>({
     });
   }
 
+  /**
+   * Public drop entry point — called from the RN thread via scheduleOnRN after
+   * the drop animation finishes in DragItemComponent.
+   *
+   * If the target is the Today list: intercepts the drop, saves it as pending,
+   * and fires onTodayDropPending so the parent can open the scheduling sheet.
+   * The actual state mutation is deferred until the user confirms.
+   *
+   * For all other lists: runs executeCommit immediately (existing behaviour).
+   */
+  function commitDrop(
+    sourceTaskId: string,
+    sourceListId: string,
+    targetListId: string,
+    targetSlot: string,
+  ) {
+    if (targetListId === TODAY_LIST_ID && sourceListId !== TODAY_LIST_ID) {
+      // Cross-list drop onto the Today list — intercept for scheduling
+      setPendingDrop({ sourceTaskId, sourceListId, targetListId, targetSlot });
+      onTodayDropPending?.();
+      return; // Wait for user's scheduling choice before committing
+    }
+
+    const isCrossSectionMove =
+      TODAY_SECTION_IDS.has(sourceListId) &&
+      TODAY_SECTION_IDS.has(targetListId) &&
+      sourceListId !== targetListId;
+
+    if (isCrossSectionMove && targetListId === "todaySection_anytime") {
+      // Dropped onto Anytime — no sheet needed. Clear scheduledTime and set timeSlot
+      // to "anytime" directly. Title/description are preserved via the setTasks updater.
+      setTasks((prevTasks) => {
+        return prevTasks.map((t) => {
+          if (t.taskId !== sourceTaskId) return t; // Leave all other tasks untouched
+          const task = t as TaskItem;
+          // Clear the scheduled time and move the task into the Anytime bucket
+          return { ...task, scheduledTime: null, timeSlot: "anytime" } as unknown as T;
+        });
+      });
+      // Still run the reorder/position part of executeCommit so order values are correct
+      executeCommit(sourceTaskId, sourceListId, targetListId, targetSlot);
+      return;
+    }
+
+    if (isCrossSectionMove) {
+      // Dragged from one timed section to another (Morning ↔ Afternoon ↔ Evening).
+      // Intercept for rescheduling — sheet will let user pick a time in the new range.
+      setPendingDrop({ sourceTaskId, sourceListId, targetListId, targetSlot });
+      onSectionDropPending?.(targetListId); // Tell Today tab which section was targeted
+      return; // Wait for user's rescheduling choice before committing
+    }
+
+    // All other drops (real cross-list move, same-section reorder): commit immediately
+    executeCommit(sourceTaskId, sourceListId, targetListId, targetSlot);
+  }
+
+  /**
+   * Finalises a pending Today drop with edited text and scheduling data.
+   * Runs executeCommit with the saved pending parameters plus the today patch,
+   * then clears the pending state so the sheet closes.
+   * Called by TodayScheduleSheet when the user presses Confirm.
+   */
+  function confirmPendingDrop(
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: TaskItem["timeSlot"],
+  ) {
+    if (!pendingDrop) return; // Guard: nothing to confirm
+    executeCommit(
+      pendingDrop.sourceTaskId,
+      pendingDrop.sourceListId,
+      pendingDrop.targetListId,
+      pendingDrop.targetSlot,
+      { title, description, scheduledTime, timeSlot }, // Attach edited text + scheduling
+    );
+    setPendingDrop(null); // Clear pending drop — sheet will close
+  }
+
+  /**
+   * Discards the pending drop without moving the task.
+   * The task stays in its original list — no state mutation occurs.
+   * Called by TodayScheduleSheet on Cancel or backdrop tap.
+   */
+  function cancelPendingDrop() {
+    setPendingDrop(null); // Clear pending drop — sheet will close
+  }
+
   // All shared values and functions bundled into a single context value
   const value: DragContextValue = {
     isDragging,
@@ -222,6 +405,9 @@ export function DragProvider<T extends DragItem>({
     ghostTitle,
     ghostDescription,
     commitDrop,
+    pendingDrop,
+    confirmPendingDrop,
+    cancelPendingDrop,
   };
 
   return <DragContext.Provider value={value}>{children}</DragContext.Provider>;
