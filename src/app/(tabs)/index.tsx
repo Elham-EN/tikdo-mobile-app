@@ -6,7 +6,7 @@
 
 import { DragProvider } from "@/contexts/DragContext";
 import InboxScreen from "@/screens/InboxScreen";
-import { loadTasks, saveTasks } from "@/storage/storage";
+import { loadTasks, saveTasks, storage } from "@/storage/storage";
 import { TaskItem } from "@/types/todoItem.types";
 import React from "react";
 
@@ -69,6 +69,19 @@ export default function Index(): React.ReactElement {
   function handleTodayDropPending() {
     setIsScheduleSheetVisible(true); // Show the scheduling sheet
   }
+
+  // Subscribe to MMKV "tasks" key changes so this tab stays in sync with the
+  // Today tab. Fires whenever the Today tab writes new tasks — e.g. after a
+  // section move or reschedule is confirmed.
+  React.useEffect(() => {
+    const subscription = storage.addOnValueChangedListener((changedKey) => {
+      if (changedKey === "tasks") {
+        setTasks(loadTasks()); // Re-read the full tasks array from MMKV
+      }
+    });
+
+    return () => subscription.remove(); // Clean up listener on unmount
+  }, []);
 
   /**
    * Midnight clear — removes all tasks from the Today list at 12:00 AM.
