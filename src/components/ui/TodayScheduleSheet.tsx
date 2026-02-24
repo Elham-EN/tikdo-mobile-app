@@ -6,9 +6,11 @@
 // cancelling aborts the move entirely.
 
 import { brand, light_surface } from "@/utils/colors";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
+import { format } from "date-fns"; // date-fns format for readable time strings
 import React from "react";
 import {
   Platform,
@@ -60,15 +62,10 @@ function resolveTimeSlot(date: Date): "morning" | "afternoon" | "evening" {
 
 /**
  * Formats a Date into a 12-hour time string like "3:10 PM".
- * Used to display the picked time on the Pick Time chip label.
+ * Uses date-fns format — "h:mm a" gives e.g. "3:10 PM".
  */
 function formatTime(date: Date): string {
-  const hours = date.getHours(); // 0–23
-  const minutes = date.getMinutes(); // 0–59
-  const h12 = hours % 12 || 12; // Convert to 12-hour; 0 becomes 12
-  const mm = minutes.toString().padStart(2, "0"); // Zero-pad minutes
-  const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
-  return `${h12}:${mm} ${ampm}`;
+  return format(date, "h:mm a"); // h = 12-hour no leading zero, mm = minutes, a = AM/PM
 }
 
 /**
@@ -242,14 +239,14 @@ export default function TodayScheduleSheet({
           />
         ) : null}
 
-        {/* Bottom row — Cancel on the left, Confirm (send) on the right */}
+        {/* Bottom row — Cancel on the left, Confirm on the right (circular icon buttons) */}
         <View style={styles.bottomRow}>
-          {/* Cancel button — outlined style, aborts the drop */}
+          {/* Cancel — grey circle with X icon, aborts the drop */}
           <Pressable style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Ionicons name="close" size={22} color="#3C3C43" />
           </Pressable>
 
-          {/* Confirm button — filled blue, commits the drop with scheduling data */}
+          {/* Confirm — blue circle with checkmark icon, commits the drop */}
           <Pressable
             style={[
               styles.confirmButton,
@@ -258,7 +255,7 @@ export default function TodayScheduleSheet({
             onPress={handleConfirm}
             disabled={!title.trim()} // Prevent submitting empty title
           >
-            <Text style={styles.confirmButtonText}>Confirm</Text>
+            <Ionicons name="checkmark" size={22} color="#fff" />
           </Pressable>
         </View>
       </View>
@@ -329,33 +326,28 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: "#FFFFFF",
   },
-  // Bottom row — Cancel and Confirm buttons side by side
+  // Bottom row — pushes buttons to the right edge
   bottomRow: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 12,
     marginTop: 8,
     paddingVertical: 8,
   },
-  // Cancel button — outlined, flexible width to fill remaining space
+  // Cancel button — grey circle with X icon
   cancelButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#D1D1D6",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E5E5EA",
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#3C3C43",
-  },
-  // Confirm button — filled brand blue
+  // Confirm button — brand blue circle with checkmark icon
   confirmButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: brand,
     alignItems: "center",
     justifyContent: "center",
@@ -363,10 +355,5 @@ const styles = StyleSheet.create({
   // Dimmed confirm button when title is empty
   confirmButtonDisabled: {
     opacity: 0.4,
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
   },
 });
