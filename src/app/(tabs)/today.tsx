@@ -4,7 +4,8 @@
 // back to the same MMKV storage so changes persist across tab switches.
 
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
-import { DragProvider } from "@/contexts/DragContext";
+import TodayScheduleSheet, { TimeRange } from "@/components/ui/TodayScheduleSheet";
+import { DragProvider, useDragContext } from "@/contexts/DragContext";
 import { loadTasks, saveTasks } from "@/storage/storage";
 import { TaskItem } from "@/types/todoItem.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -25,25 +26,84 @@ const SECTION_IDS = {
   evening: "todaySection_evening",
 } as const;
 
-// ─── TodayContent ─────────────────────────────────────────────────────────────
-// Inner component that renders the four DragList sections.
-// Sits inside DragProvider so it can read/write drag context.
-
-interface TodayContentProps {
-  tasks: TaskItem[]; // All tasks — will be filtered per section below
+// Maps a section ID to the hour range the time picker should be restricted to.
+// Returns undefined for Anytime (no restriction) or unknown section IDs.
+// Hours are in 24-hour format: morning = 5–11, afternoon = 12–16, evening = 17–23.
+function sectionTimeRange(sectionId: string | null): TimeRange | undefined {
+  switch (sectionId) {
+    case SECTION_IDS.morning:
+      return { startHour: 5, endHour: 11 }; // 5:00 AM – 11:59 AM
+    case SECTION_IDS.afternoon:
+      return { startHour: 12, endHour: 16 }; // 12:00 PM – 4:59 PM
+    case SECTION_IDS.evening:
+      return { startHour: 17, endHour: 23 }; // 5:00 PM – 11:59 PM
+    default:
+      return undefined; // Anytime or no section — picker unrestricted
+  }
 }
 
-function TodayContent({ tasks }: TodayContentProps): React.ReactElement {
+// ─── TodayContent ─────────────────────────────────────────────────────────────
+// Inner component that renders the four DragList sections and the reschedule sheet.
+// Sits inside DragProvider so it can call useDragContext().
+
+interface TodayContentProps {
+  tasks: TaskItem[]; // All tasks — filtered per section below
+  isSheetVisible: boolean; // Whether the reschedule sheet is open
+  targetSectionId: string | null; // Which section the pending drop targets
+  onSheetClose: () => void; // Called when the sheet should close
+}
+
+function TodayContent({
+  tasks,
+  isSheetVisible,
+  targetSectionId,
+  onSheetClose,
+}: TodayContentProps): React.ReactElement {
   const insets = useSafeAreaInsets(); // Safe area for notch / home indicator
+  const { pendingDrop, confirmPendingDrop, cancelPendingDrop } =
+    useDragContext();
+
+  // Look up the pending task so we can pre-fill title/description in the sheet
+  const pendingTask = pendingDrop
+    ? tasks.find((t) => t.taskId === pendingDrop.sourceTaskId) ?? null
+    : null;
+
+  // Determine chip pre-selection based on which section the task is being moved to.
+  // Morning/Afternoon/Evening → pre-select "picktime" so user picks a time in that range.
+  // Anytime → "anytime" (but the sheet won't open for Anytime drops anyway).
+  const defaultSelection: "anytime" | "picktime" =
+    targetSectionId === SECTION_IDS.anytime ? "anytime" : "picktime";
+
+  /**
+   * Confirm handler — forwards edited text and scheduling data to DragContext
+   * to finalise the section move, then closes the sheet.
+   */
+  function handleConfirm(
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: "anytime" | "morning" | "afternoon" | "evening",
+  ) {
+    confirmPendingDrop(title, description, scheduledTime, timeSlot);
+    onSheetClose();
+  }
+
+  /**
+   * Cancel handler — discards the pending section move so the task stays put,
+   * then closes the sheet.
+   */
+  function handleCancel() {
+    cancelPendingDrop();
+    onSheetClose();
+  }
 
   // Filter Today tasks by timeSlot for each section, sorted by order
-  // Tasks with timeSlot undefined are not in Today and are excluded entirely
   function getSection(
     slot: "anytime" | "morning" | "afternoon" | "evening",
   ): TaskItem[] {
     return tasks
       .filter((t) => t.listId === TODAY_LIST_ID && t.timeSlot === slot)
-      .sort((a, b) => a.order - b.order); // Keep user-defined order within section
+      .sort((a, b) => a.order - b.order);
   }
 
   return (
@@ -90,6 +150,18 @@ function TodayContent({ tasks }: TodayContentProps): React.ReactElement {
 
       {/* Ghost floats above everything during a drag */}
       <DragGhost />
+
+      {/* Reschedule sheet — opens when a task is dragged between timed sections.
+          timeRange constrains the picker to the target section's valid hours. */}
+      <TodayScheduleSheet
+        visible={isSheetVisible}
+        taskTitle={pendingTask?.title ?? ""}
+        taskDescription={pendingTask?.description ?? ""}
+        defaultSelection={defaultSelection}
+        timeRange={sectionTimeRange(targetSectionId)}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </View>
   );
 }
@@ -103,37 +175,51 @@ export default function Today(): React.ReactElement {
   // Load tasks from MMKV on mount — same store as the Inbox tab
   const [tasks, setTasks] = React.useState<TaskItem[]>(() => loadTasks());
 
-  // Reload tasks whenever the screen comes into focus so changes made on the
-  // Inbox tab (drag to Today, new tasks) are reflected here immediately.
-  // Using a focus listener would require navigation context; instead we reload
-  // on every render cycle via a simple interval check is overkill — the simplest
-  // correct approach is to reload on mount + expose a manual refresh via state.
-  // For now, reload on mount. A future improvement could use a shared store.
+  // Whether the reschedule sheet is open
+  const [isSheetVisible, setIsSheetVisible] = React.useState(false);
+
+  // The target section ID that triggered the pending drop — used to pre-select
+  // the correct chip in the sheet (picktime for Morning/Afternoon/Evening)
+  const [targetSectionId, setTargetSectionId] = React.useState<string | null>(
+    null,
+  );
+
+  // Re-read MMKV when the tab mounts so changes from the Inbox tab are visible
   React.useEffect(() => {
-    setTasks(loadTasks()); // Re-read MMKV when the component mounts / tab is focused
+    setTasks(loadTasks());
   }, []);
 
   /**
    * Persists task mutations back to MMKV.
-   * Called by DragProvider when the user reorders tasks within a section.
-   * We merge the updated Today tasks back into the full tasks array so
-   * non-Today tasks (Inbox, Upcoming, etc.) are preserved.
+   * Called by DragProvider on every reorder or cross-section commit.
    */
   function persistTasks(
     updater: TaskItem[] | ((prev: TaskItem[]) => TaskItem[]),
   ): void {
     setTasks((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      saveTasks(next); // Write merged array to MMKV
+      saveTasks(next);
       return next;
     });
   }
 
+  /**
+   * Called by DragProvider when a task is dragged from one timed section to another.
+   * Saves which section was targeted then opens the reschedule sheet.
+   */
+  function handleSectionDropPending(sectionId: string) {
+    setTargetSectionId(sectionId); // Remember target so TodayContent can read it
+    setIsSheetVisible(true); // Open the reschedule sheet
+  }
+
   return (
-    // Each tab gets its own DragProvider — they do not share drag state,
-    // but both read/write the same MMKV store for task data.
-    <DragProvider setTasks={persistTasks}>
-      <TodayContent tasks={tasks} />
+    <DragProvider setTasks={persistTasks} onSectionDropPending={handleSectionDropPending}>
+      <TodayContent
+        tasks={tasks}
+        isSheetVisible={isSheetVisible}
+        targetSectionId={targetSectionId}
+        onSheetClose={() => setIsSheetVisible(false)}
+      />
     </DragProvider>
   );
 }

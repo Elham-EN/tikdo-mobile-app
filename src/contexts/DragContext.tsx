@@ -12,6 +12,15 @@ import { useAnimatedRef, useSharedValue } from "react-native-reanimated";
 // The listId of the "Today" list — drops to this list are intercepted for scheduling
 const TODAY_LIST_ID = "listToday002";
 
+// The virtual section IDs used by the Today tab for its four time sections.
+// Drops between these sections are intercepted for rescheduling.
+const TODAY_SECTION_IDS = new Set([
+  "todaySection_anytime",
+  "todaySection_morning",
+  "todaySection_afternoon",
+  "todaySection_evening",
+]);
+
 // Holds the four drop parameters saved when a Today drop is intercepted.
 // Stored until the user confirms or cancels the scheduling sheet.
 type PendingDrop = {
@@ -98,6 +107,9 @@ type DragProviderProps<T extends DragItem> = {
   // Optional callback fired when a drop to Today is intercepted.
   // Parent uses this signal to open the scheduling sheet.
   onTodayDropPending?: () => void;
+  // Optional callback fired when a task is dragged from one Today section to another.
+  // Receives the target section ID so the parent can pre-select the right time range.
+  onSectionDropPending?: (targetSectionId: string) => void;
 };
 
 /**
@@ -110,6 +122,7 @@ export function DragProvider<T extends DragItem>({
   children,
   setTasks,
   onTodayDropPending,
+  onSectionDropPending,
 }: DragProviderProps<T>) {
   // --- Drag identity ---
   const isDragging = useSharedValue(false);
@@ -212,13 +225,21 @@ export function DragProvider<T extends DragItem>({
         });
       } else {
         // --- CROSS-LIST MOVE ---
-        // 1. Move the dragged task to the target list
         const draggedGlobalIdx = updated.findIndex(
           (t) => t.taskId === sourceTaskId,
         );
-        updated[draggedGlobalIdx].listId = targetListId;
 
-        // Apply edited text and scheduling metadata if provided (only for Today drops)
+        // For cross-section Today moves, keep listId as TODAY_LIST_ID —
+        // the task stays in Today, only its timeSlot changes.
+        // For all other cross-list moves, update listId to the target list.
+        const isSectionMove =
+          TODAY_SECTION_IDS.has(sourceListId) &&
+          TODAY_SECTION_IDS.has(targetListId);
+        if (!isSectionMove) {
+          updated[draggedGlobalIdx].listId = targetListId; // Real list move
+        }
+
+        // Apply scheduling patch — for Today inbox drops and Today section moves
         if (todayPatch) {
           const task = updated[draggedGlobalIdx] as TaskItem;
           task.title = todayPatch.title; // User may have edited the title
@@ -280,14 +301,42 @@ export function DragProvider<T extends DragItem>({
     targetSlot: string,
   ) {
     if (targetListId === TODAY_LIST_ID && sourceListId !== TODAY_LIST_ID) {
-      // Only intercept cross-list drops to Today — reordering within Today skips the sheet
-      // Store drop parameters — the scheduling sheet will read them via pendingDrop
+      // Cross-list drop onto the Today list — intercept for scheduling
       setPendingDrop({ sourceTaskId, sourceListId, targetListId, targetSlot });
-      // Notify the parent to open the scheduling sheet
       onTodayDropPending?.();
-      return; // Do NOT commit yet — wait for the user's scheduling choice
+      return; // Wait for user's scheduling choice before committing
     }
-    // Non-Today drop: commit immediately with no scheduling data
+
+    const isCrossSectionMove =
+      TODAY_SECTION_IDS.has(sourceListId) &&
+      TODAY_SECTION_IDS.has(targetListId) &&
+      sourceListId !== targetListId;
+
+    if (isCrossSectionMove && targetListId === "todaySection_anytime") {
+      // Dropped onto Anytime — no sheet needed. Clear scheduledTime and set timeSlot
+      // to "anytime" directly. Title/description are preserved via the setTasks updater.
+      setTasks((prevTasks) => {
+        return prevTasks.map((t) => {
+          if (t.taskId !== sourceTaskId) return t; // Leave all other tasks untouched
+          const task = t as TaskItem;
+          // Clear the scheduled time and move the task into the Anytime bucket
+          return { ...task, scheduledTime: null, timeSlot: "anytime" } as unknown as T;
+        });
+      });
+      // Still run the reorder/position part of executeCommit so order values are correct
+      executeCommit(sourceTaskId, sourceListId, targetListId, targetSlot);
+      return;
+    }
+
+    if (isCrossSectionMove) {
+      // Dragged from one timed section to another (Morning ↔ Afternoon ↔ Evening).
+      // Intercept for rescheduling — sheet will let user pick a time in the new range.
+      setPendingDrop({ sourceTaskId, sourceListId, targetListId, targetSlot });
+      onSectionDropPending?.(targetListId); // Tell Today tab which section was targeted
+      return; // Wait for user's rescheduling choice before committing
+    }
+
+    // All other drops (real cross-list move, same-section reorder): commit immediately
     executeCommit(sourceTaskId, sourceListId, targetListId, targetSlot);
   }
 
