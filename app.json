@@ -67,7 +67,8 @@
             "./assets/fonts/Balsamiq_Sans/BalsamiqSans-BoldItalic.ttf"
           ]
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
