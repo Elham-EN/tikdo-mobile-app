@@ -6,7 +6,7 @@
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
 import TodayScheduleSheet, { TimeRange } from "@/components/ui/TodayScheduleSheet";
 import { DragProvider, useDragContext } from "@/contexts/DragContext";
-import { loadTasks, saveTasks } from "@/storage/storage";
+import { loadTasks, saveTasks, storage } from "@/storage/storage";
 import { TaskItem } from "@/types/todoItem.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as React from "react";
@@ -184,9 +184,20 @@ export default function Today(): React.ReactElement {
     null,
   );
 
-  // Re-read MMKV when the tab mounts so changes from the Inbox tab are visible
+  // Subscribe to MMKV "tasks" key changes so this tab stays in sync with the
+  // Inbox tab. Fires immediately on mount (initial load) and again whenever
+  // the Inbox tab writes new tasks — e.g. after a Today drop is confirmed.
   React.useEffect(() => {
-    setTasks(loadTasks());
+    setTasks(loadTasks()); // Load on mount in case the key was written before the listener attached
+
+    // addOnValueChangedListener fires whenever storage.set("tasks", ...) is called
+    const subscription = storage.addOnValueChangedListener((changedKey) => {
+      if (changedKey === "tasks") {
+        setTasks(loadTasks()); // Re-read the full tasks array from MMKV
+      }
+    });
+
+    return () => subscription.remove(); // Clean up listener on unmount
   }, []);
 
   /**
