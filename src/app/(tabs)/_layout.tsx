@@ -8,7 +8,7 @@ export default function TabLayout() {
         <Icon sf={"tray.and.arrow.down"} drawable="custom_android_drawable" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="today">
-        <Icon sf="checkmark.app" drawable="custom_settings_drawable" />
+        <Icon sf="checkmark.circle" drawable="custom_settings_drawable" />
         <Label>Today</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="calendar">
