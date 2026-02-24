@@ -4,9 +4,12 @@
 // While dragging: moves the ghost, hit-tests the layout registry each frame.
 // On drop: commits state via scheduleOnRN, cleans up.
 import { useDragContext } from "@/contexts/DragContext";
+import { TaskItem } from "@/types/todoItem.types";
+import { brand } from "@/utils/colors";
+import { format, parse } from "date-fns"; // parse HH:MM string; format to 12-hour display
 import * as Haptics from "expo-haptics";
 import * as React from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   measure,
@@ -49,6 +52,9 @@ interface DragItemComponentProps {
   order: number;
   title: string; // Display title shown in the item row
   description?: string; // Optional secondary text
+  // Scheduling metadata — only set for Today list items
+  scheduledTime?: string | null; // "HH:MM" 24-hour string or null for Anytime
+  timeSlot?: TaskItem["timeSlot"]; // Time-of-day bucket, undefined if not in Today
 }
 
 /**
@@ -61,6 +67,8 @@ export default function DragItemComponent({
   order,
   title,
   description,
+  scheduledTime,
+  timeSlot,
 }: DragItemComponentProps): React.ReactElement {
   const {
     isDragging,
@@ -358,6 +366,17 @@ export default function DragItemComponent({
     });
   }
 
+  // Derive the pill label from scheduling data.
+  // Only shown when timeSlot is defined (i.e. task is in the Today list).
+  // "anytime" → "Anytime"; a picked time → formatted 12-hour string e.g. "3:10 PM".
+  const pillLabel: string | null = React.useMemo(() => {
+    if (timeSlot === undefined) return null; // Not a Today list item — no pill
+    if (timeSlot === "anytime" || !scheduledTime) return "Anytime"; // No specific time
+    // Parse the stored "HH:MM" string into a Date so date-fns can format it
+    const parsed = parse(scheduledTime, "HH:mm", new Date());
+    return format(parsed, "h:mm a"); // e.g. "3:10 PM"
+  }, [timeSlot, scheduledTime]);
+
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View
@@ -365,11 +384,28 @@ export default function DragItemComponent({
         style={[styles.taskItem, itemAnimatedStyle]}
         onLayout={handleLayout}
       >
-        {/* Item title — bold and prominent */}
-        <Text style={styles.taskTitle}>{title}</Text>
-        {/* Item description — smaller and muted */}
+        {/* Top row — title on left, scheduling pill on right */}
+        <View style={styles.titleRow}>
+          {/* Item title — bold and prominent, shrinks to make room for pill */}
+          <Text style={styles.taskTitle}>{title}</Text>
+          {/* Scheduling pill — only shown for Today list items */}
+          {pillLabel !== null ? (
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{pillLabel}</Text>
+            </View>
+          ) : null}
+        </View>
+        {/* Item description — truncated to 15 chars with ellipsis, single line */}
         {description ? (
-          <Text style={styles.taskDescription}>{description}</Text>
+          <Text
+            style={styles.taskDescription}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {description.length > 30
+              ? `${description.slice(0, 30)}...`
+              : description}
+          </Text>
         ) : null}
       </Animated.View>
     </GestureDetector>
@@ -385,14 +421,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
   },
-  // Item title styling
+  // Row holding title + pill — space-between pushes pill to the right
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  // Item title — flex:1 so it shrinks before the pill does
   taskTitle: {
+    flex: 1,
     fontSize: 16,
     fontWeight: "500",
     color: "#1C1C1E",
-    marginBottom: 4,
   },
-  // Item description styling
+  // Scheduling pill — brand-blue background, rounded, fixed to content width
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 100,
+    backgroundColor: brand,
+    alignSelf: "center",
+  },
+  // Pill label — white text, small and tight
+  pillText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#ffffff",
+  },
+  // Item description — wraps to new lines when text is long
   taskDescription: {
     fontSize: 14,
     color: "#8E8E93",

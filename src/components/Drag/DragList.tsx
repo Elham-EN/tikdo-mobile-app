@@ -3,6 +3,7 @@
 // list lives. Renders blue insertion lines between items to preview the drop position.
 import { useDragContext } from "@/contexts/DragContext";
 import { DragItem } from "@/types/dnd.types";
+import { TaskItem } from "@/types/todoItem.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -250,6 +251,8 @@ function DragList({
                 order={task.order}
                 title={task.title}
                 description={task.description}
+                scheduledTime={(task as TaskItem).scheduledTime}
+                timeSlot={(task as TaskItem).timeSlot}
               />
               {/* Slot after this item — key is the NEXT item's taskId so it
                   matches hitTest's "insert before next item" slot key.
