@@ -239,6 +239,18 @@ export function DragProvider<T extends DragItem>({
           updated[draggedGlobalIdx].listId = targetListId; // Real list move
         }
 
+        // If the task is leaving the Today list (or a Today section) and going to a
+        // regular inbox list, clear scheduling metadata so no pill is shown on the item.
+        const isLeavingToday =
+          (sourceListId === TODAY_LIST_ID || TODAY_SECTION_IDS.has(sourceListId)) &&
+          targetListId !== TODAY_LIST_ID &&
+          !TODAY_SECTION_IDS.has(targetListId);
+        if (isLeavingToday) {
+          const task = updated[draggedGlobalIdx] as TaskItem;
+          task.scheduledTime = undefined; // Strip the picked time — item is no longer scheduled
+          task.timeSlot = undefined; // Strip the time bucket — pill should not appear
+        }
+
         // Apply scheduling patch — for Today inbox drops and Today section moves
         if (todayPatch) {
           const task = updated[draggedGlobalIdx] as TaskItem;
