@@ -4,11 +4,14 @@
 // back to the same MMKV storage so changes persist across tab switches.
 
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
-import TodayScheduleSheet, { TimeRange } from "@/components/ui/TodayScheduleSheet";
+import TodayScheduleSheet, {
+  TimeRange,
+} from "@/components/ui/TodayScheduleSheet";
 import { DragProvider, useDragContext } from "@/contexts/DragContext";
 import { loadTasks, saveTasks, storage } from "@/storage/storage";
 import { TaskItem } from "@/types/todoItem.types";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { format } from "date-fns";
 import * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -65,7 +68,7 @@ function TodayContent({
 
   // Look up the pending task so we can pre-fill title/description in the sheet
   const pendingTask = pendingDrop
-    ? tasks.find((t) => t.taskId === pendingDrop.sourceTaskId) ?? null
+    ? (tasks.find((t) => t.taskId === pendingDrop.sourceTaskId) ?? null)
     : null;
 
   // Determine chip pre-selection based on which section the task is being moved to.
@@ -106,10 +109,26 @@ function TodayContent({
       .sort((a, b) => a.order - b.order);
   }
 
+  // Get Current Day and Date
+  const getCurrentDayName = () => {
+    const currentDate = new Date();
+    const dayName = format(currentDate, "EEEE");
+    const formattedDate = format(currentDate, "dd MMM yyyy");
+    return {
+      dayName,
+      formattedDate,
+    };
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
       {/* Screen title */}
-      <Text style={styles.header}>Today</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerDay}>{getCurrentDayName().dayName}</Text>
+        <Text style={styles.headerDate}>
+          {getCurrentDayName().formattedDate}
+        </Text>
+      </View>
 
       {/* DragScrollView wires scrollViewRef and scroll tracking from drag context */}
       <DragScrollView
@@ -224,7 +243,10 @@ export default function Today(): React.ReactElement {
   }
 
   return (
-    <DragProvider setTasks={persistTasks} onSectionDropPending={handleSectionDropPending}>
+    <DragProvider
+      setTasks={persistTasks}
+      onSectionDropPending={handleSectionDropPending}
+    >
       <TodayContent
         tasks={tasks}
         isSheetVisible={isSheetVisible}
@@ -241,10 +263,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8F8F8",
   },
-  // Screen title — same style as InboxScreen header
+
   header: {
-    fontSize: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  // Screen title — same style as InboxScreen header
+  headerDay: {
+    fontSize: 28,
+    fontFamily: "BalsamiqSans-Regular",
     fontWeight: "700",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: "#1C1C1E",
+  },
+
+  headerDate: {
+    fontSize: 16,
+    fontFamily: "BalsamiqSans-Regular",
+    fontWeight: "600",
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: "#1C1C1E",
