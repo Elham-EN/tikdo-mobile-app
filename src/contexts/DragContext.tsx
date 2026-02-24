@@ -279,7 +279,8 @@ export function DragProvider<T extends DragItem>({
     targetListId: string,
     targetSlot: string,
   ) {
-    if (targetListId === TODAY_LIST_ID) {
+    if (targetListId === TODAY_LIST_ID && sourceListId !== TODAY_LIST_ID) {
+      // Only intercept cross-list drops to Today — reordering within Today skips the sheet
       // Store drop parameters — the scheduling sheet will read them via pendingDrop
       setPendingDrop({ sourceTaskId, sourceListId, targetListId, targetSlot });
       // Notify the parent to open the scheduling sheet
