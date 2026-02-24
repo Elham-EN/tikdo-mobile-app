@@ -72,9 +72,11 @@ export type DragContextValue = {
   // Non-null means the scheduling sheet should be open.
   pendingDrop: PendingDrop | null;
 
-  // Finalises a pending drop by applying scheduling fields and running the state mutation.
+  // Finalises a pending drop by applying edited text + scheduling fields and running the state mutation.
   // Called by TodayScheduleSheet when the user presses Confirm.
   confirmPendingDrop: (
+    title: string,
+    description: string,
     scheduledTime: string | null,
     timeSlot: TaskItem["timeSlot"],
   ) => void;
@@ -164,8 +166,11 @@ export function DragProvider<T extends DragItem>({
     targetListId: string,
     // Slot key from hitTest: taskId of item to insert BEFORE, or "end:<listId>"
     targetSlot: string,
-    // Optional scheduling fields applied to the moved task — only used for Today drops
-    schedulingPatch?: {
+    // Optional patch applied to the moved task — only used for Today drops.
+    // Includes edited title/description and the user's scheduling choice.
+    todayPatch?: {
+      title: string;
+      description: string;
       scheduledTime: string | null;
       timeSlot: TaskItem["timeSlot"];
     },
@@ -213,13 +218,13 @@ export function DragProvider<T extends DragItem>({
         );
         updated[draggedGlobalIdx].listId = targetListId;
 
-        // Apply scheduling metadata if provided (only for Today drops)
-        if (schedulingPatch) {
-          // Save the user's chosen scheduled time and time-of-day slot onto the task
-          (updated[draggedGlobalIdx] as TaskItem).scheduledTime =
-            schedulingPatch.scheduledTime;
-          (updated[draggedGlobalIdx] as TaskItem).timeSlot =
-            schedulingPatch.timeSlot;
+        // Apply edited text and scheduling metadata if provided (only for Today drops)
+        if (todayPatch) {
+          const task = updated[draggedGlobalIdx] as TaskItem;
+          task.title = todayPatch.title; // User may have edited the title
+          task.description = todayPatch.description; // User may have edited the description
+          task.scheduledTime = todayPatch.scheduledTime; // Chosen time or null for Anytime
+          task.timeSlot = todayPatch.timeSlot; // Time-of-day bucket
         }
 
         // 2. Re-index the source list (dragged item is now gone from it)
@@ -286,12 +291,14 @@ export function DragProvider<T extends DragItem>({
   }
 
   /**
-   * Finalises a pending Today drop with the user's chosen scheduling data.
-   * Runs executeCommit with the saved pending parameters plus the scheduling patch,
+   * Finalises a pending Today drop with edited text and scheduling data.
+   * Runs executeCommit with the saved pending parameters plus the today patch,
    * then clears the pending state so the sheet closes.
    * Called by TodayScheduleSheet when the user presses Confirm.
    */
   function confirmPendingDrop(
+    title: string,
+    description: string,
     scheduledTime: string | null,
     timeSlot: TaskItem["timeSlot"],
   ) {
@@ -301,7 +308,7 @@ export function DragProvider<T extends DragItem>({
       pendingDrop.sourceListId,
       pendingDrop.targetListId,
       pendingDrop.targetSlot,
-      { scheduledTime, timeSlot }, // Attach the user's scheduling choice
+      { title, description, scheduledTime, timeSlot }, // Attach edited text + scheduling
     );
     setPendingDrop(null); // Clear pending drop — sheet will close
   }

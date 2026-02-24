@@ -1,11 +1,9 @@
 // TodayScheduleSheet — bottom sheet shown when a task is dropped onto the Today list.
-// Displays the task's title and description read-only, then lets the user choose
-// "Anytime" or "Pick Time" (with a native time picker).
-// Confirming commits the drop with scheduling metadata; cancelling aborts the move.
-//
-// iOS time picker: uses display="compact" which renders a tappable pill showing the
-// selected time. Tapping it opens the native floating drum-roll popover above the chip.
-// Android: uses the imperative DateTimePickerAndroid.open() dialog.
+// Similar to AddTaskSheet: editable title and description inputs, plus scheduling
+// chips (Anytime / Pick Time). Tapping "Pick Time" reveals an inline spinner picker.
+// On Android the system time dialog opens instead.
+// Confirming commits the drop with edited text and scheduling metadata;
+// cancelling aborts the move entirely.
 
 import { brand, light_surface } from "@/utils/colors";
 import DateTimePicker, {
@@ -17,6 +15,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import BottomSheet from "./BottomSheet";
@@ -24,10 +23,12 @@ import BottomSheet from "./BottomSheet";
 // Props the parent must supply to drive this sheet
 interface TodayScheduleSheetProps {
   visible: boolean; // Whether the sheet is open
-  taskTitle: string; // Task title shown read-only at the top
-  taskDescription: string; // Task description shown read-only below the title
-  // Called when user presses Confirm; provides the chosen time and slot
+  taskTitle: string; // Initial task title — pre-filled, editable
+  taskDescription: string; // Initial task description — pre-filled, editable
+  // Called when user presses Confirm; provides edited text, chosen time, and slot
   onConfirm: (
+    title: string,
+    description: string,
     scheduledTime: string | null,
     timeSlot: "anytime" | "morning" | "afternoon" | "evening",
   ) => void;
@@ -58,8 +59,22 @@ function resolveTimeSlot(date: Date): "morning" | "afternoon" | "evening" {
 }
 
 /**
+ * Formats a Date into a 12-hour time string like "3:10 PM".
+ * Used to display the picked time on the Pick Time chip label.
+ */
+function formatTime(date: Date): string {
+  const hours = date.getHours(); // 0–23
+  const minutes = date.getMinutes(); // 0–59
+  const h12 = hours % 12 || 12; // Convert to 12-hour; 0 becomes 12
+  const mm = minutes.toString().padStart(2, "0"); // Zero-pad minutes
+  const ampm = hours >= 12 ? "PM" : "AM"; // Determine AM/PM
+  return `${h12}:${mm} ${ampm}`;
+}
+
+/**
  * TodayScheduleSheet renders the scheduling bottom sheet.
- * The sheet stays open until the user either Confirms or Cancels.
+ * Follows the same pattern as AddTaskSheet — editable title/description inputs
+ * at the top, with scheduling controls (chip row + inline spinner) below.
  * All state resets when the sheet reopens so each task starts fresh.
  */
 export default function TodayScheduleSheet({
@@ -69,25 +84,40 @@ export default function TodayScheduleSheet({
   onConfirm,
   onCancel,
 }: TodayScheduleSheetProps): React.ReactElement {
+  // Editable title — pre-filled from the dragged task
+  const [title, setTitle] = React.useState(taskTitle);
+
+  // Editable description — pre-filled from the dragged task
+  const [description, setDescription] = React.useState(taskDescription);
+
   // Which chip is selected — defaults to "anytime" every time the sheet opens
   const [selection, setSelection] = React.useState<"anytime" | "picktime">(
     "anytime",
   );
 
-  // The Date the user has picked; defaults to now, updated as the user changes the picker
+  // The Date the user has picked; defaults to now, updated by the spinner
   const [pickedTime, setPickedTime] = React.useState<Date>(new Date());
 
-  // Reset all local state every time the sheet opens so it's always fresh
+  // Ref to auto-focus the title input when the sheet mounts
+  const titleRef = React.useRef<TextInput>(null);
+
+  // Reset all local state every time the sheet opens with fresh task data
   React.useEffect(() => {
     if (visible) {
+      setTitle(taskTitle); // Pre-fill from the dragged task
+      setDescription(taskDescription); // Pre-fill from the dragged task
       setSelection("anytime"); // Default chip back to Anytime
       setPickedTime(new Date()); // Reset time to now
+
+      // Auto-focus the title input after a short delay so the Modal has time to mount
+      const timer = setTimeout(() => titleRef.current?.focus(), 100);
+      return () => clearTimeout(timer); // Clean up if sheet closes before timer fires
     }
-  }, [visible]);
+  }, [visible, taskTitle, taskDescription]);
 
   /**
    * Opens the Android native time picker dialog imperatively.
-   * Not used on iOS — iOS uses the inline compact DateTimePicker in the JSX.
+   * Not used on iOS — iOS shows the inline spinner in the JSX below.
    */
   function openAndroidTimePicker() {
     DateTimePickerAndroid.open({
@@ -106,12 +136,14 @@ export default function TodayScheduleSheet({
   /**
    * Handles the Confirm button press.
    * Derives scheduledTime (HH:MM string or null) and timeSlot from the selection,
-   * then passes them up to the parent to finalise the drop.
+   * then passes edited text and scheduling data up to the parent.
    */
   function handleConfirm() {
+    if (!title.trim()) return; // Don't submit with empty title
+
     if (selection === "anytime") {
       // No specific time — categorised as "Anytime" on the Today screen
-      onConfirm(null, "anytime");
+      onConfirm(title.trim(), description.trim(), null, "anytime");
       return;
     }
 
@@ -119,31 +151,33 @@ export default function TodayScheduleSheet({
     const timeSlot = resolveTimeSlot(pickedTime);
     const hh = pickedTime.getHours().toString().padStart(2, "0"); // Zero-pad hours
     const mm = pickedTime.getMinutes().toString().padStart(2, "0"); // Zero-pad minutes
-    onConfirm(`${hh}:${mm}`, timeSlot); // e.g. "14:30", "afternoon"
+    onConfirm(title.trim(), description.trim(), `${hh}:${mm}`, timeSlot);
   }
 
   return (
     <BottomSheet visible={visible} onClose={onCancel}>
       <View style={styles.container}>
-        {/* Drag handle — visual affordance showing the sheet can be dismissed */}
-        <View style={styles.handle} />
+        {/* Editable title input — pre-filled from dragged task, auto-focused */}
+        <TextInput
+          ref={titleRef}
+          style={styles.titleInput}
+          placeholder="Task title"
+          placeholderTextColor="#999"
+          value={title}
+          onChangeText={setTitle}
+        />
 
-        {/* Sheet heading */}
-        <Text style={styles.sheetTitle}>Schedule for Today</Text>
+        {/* Editable description input — pre-filled, multiline */}
+        <TextInput
+          style={styles.descriptionInput}
+          placeholder="Description"
+          placeholderTextColor="#BBB"
+          value={description}
+          onChangeText={setDescription}
+          multiline // Allows multiple lines for longer descriptions
+        />
 
-        {/* Task title displayed read-only — the user cannot edit it here */}
-        <Text style={styles.taskTitle} numberOfLines={2}>
-          {taskTitle}
-        </Text>
-
-        {/* Task description — only rendered when non-empty to save vertical space */}
-        {taskDescription ? (
-          <Text style={styles.taskDescription} numberOfLines={3}>
-            {taskDescription}
-          </Text>
-        ) : null}
-
-        {/* Thin horizontal rule separating task info from scheduling controls */}
+        {/* Thin horizontal rule separating text inputs from scheduling controls */}
         <View style={styles.divider} />
 
         {/* Chip row — Anytime pill on left, Pick Time pill on right */}
@@ -166,81 +200,64 @@ export default function TodayScheduleSheet({
             </Text>
           </Pressable>
 
-          {/* "Pick Time" chip — on iOS renders a compact native time picker inline.
-              On Android the chip is a plain Pressable that opens the system dialog. */}
-          {Platform.OS === "ios" ? (
-            // iOS: the chip pill contains a "Pick Time" label on the left and the
-            // native compact DateTimePicker on the right. display="compact" renders
-            // a tappable time label that opens the native floating drum-roll popover.
-            // The picker needs an explicit width so iOS renders the full time label
-            // instead of collapsing it to a tiny toggle.
-            <View
+          {/* "Pick Time" chip — tapping it selects and on Android opens the system dialog */}
+          <Pressable
+            style={[
+              styles.chip,
+              selection === "picktime" && styles.chipSelected, // Blue fill when active
+            ]}
+            onPress={() => {
+              setSelection("picktime"); // Switch chip selection
+              // On Android, open the native time dialog immediately
+              if (Platform.OS === "android") {
+                openAndroidTimePicker();
+              }
+            }}
+          >
+            <Text
               style={[
-                styles.chip,
-                styles.chipRow_ios, // Row layout so label + picker sit side by side
-                selection === "picktime" && styles.chipSelected,
+                styles.chipText,
+                selection === "picktime" && styles.chipTextSelected,
               ]}
             >
-              {/* Label shown before the user picks a time */}
-              <Text
-                style={[
-                  styles.chipText,
-                  selection === "picktime" && styles.chipTextSelected,
-                ]}
-              >
-                {selection === "picktime" ? "" : "Pick Time"}
-              </Text>
-              <DateTimePicker
-                value={pickedTime} // The current time shown in the compact label
-                mode="time" // Time picker only
-                display="compact" // Compact pill that pops a floating picker on tap
-                themeVariant="light" // Keep the label readable on both chip states
-                style={styles.iosPickerInline} // Fixed width so iOS renders the time label fully
-                onChange={(_event, selectedDate) => {
-                  // Fires when the user picks a time in the popover
-                  if (selectedDate) {
-                    setPickedTime(selectedDate); // Store the chosen time
-                    setSelection("picktime"); // Switch chip to Pick Time
-                  }
-                }}
-              />
-            </View>
-          ) : (
-            // Android: plain pressable chip that opens the system time dialog
-            <Pressable
-              style={[
-                styles.chip,
-                selection === "picktime" && styles.chipSelected,
-              ]}
-              onPress={() => {
-                setSelection("picktime"); // Switch chip selection
-                openAndroidTimePicker(); // Open the Android native time dialog
-              }}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selection === "picktime" && styles.chipTextSelected,
-                ]}
-              >
-                {/* Show formatted time after the user picks one */}
-                {selection === "picktime"
-                  ? `${pickedTime.getHours() % 12 || 12}:${pickedTime.getMinutes().toString().padStart(2, "0")} ${pickedTime.getHours() >= 12 ? "PM" : "AM"}`
-                  : "Pick Time"}
-              </Text>
-            </Pressable>
-          )}
+              {/* Show formatted time when a time has been picked, otherwise show label */}
+              {selection === "picktime" ? formatTime(pickedTime) : "Pick Time"}
+            </Text>
+          </Pressable>
         </View>
 
-        {/* Bottom button row — Cancel on the left, Confirm on the right */}
-        <View style={styles.buttonRow}>
+        {/* Inline iOS spinner — shown below chips when "Pick Time" is selected.
+            display="spinner" renders the drum-roll wheels directly in the layout. */}
+        {selection === "picktime" && Platform.OS === "ios" ? (
+          <DateTimePicker
+            value={pickedTime} // The current time shown on the spinner wheels
+            mode="time" // Time picker only
+            display="spinner" // Inline drum-roll wheels rendered in the layout
+            onChange={(_event, selectedDate) => {
+              // Fires as the user scrolls the spinner wheels
+              if (selectedDate) {
+                setPickedTime(selectedDate); // Update the picked time
+              }
+            }}
+          />
+        ) : null}
+
+        {/* Bottom row — Cancel on the left, Confirm (send) on the right */}
+        <View style={styles.bottomRow}>
           {/* Cancel button — outlined style, aborts the drop */}
           <Pressable style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
 
           {/* Confirm button — filled blue, commits the drop with scheduling data */}
-          <Pressable style={styles.confirmButton} onPress={handleConfirm}>
+          <Pressable
+            style={[
+              styles.confirmButton,
+              !title.trim() && styles.confirmButtonDisabled, // Dim when title is empty
+            ]}
+            onPress={handleConfirm}
+            disabled={!title.trim()} // Prevent submitting empty title
+          >
             <Text style={styles.confirmButtonText}>Confirm</Text>
           </Pressable>
         </View>
@@ -253,64 +270,38 @@ const styles = StyleSheet.create({
   // Sheet content container — white background with rounded top corners
   container: {
     backgroundColor: light_surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 32, // Extra bottom padding so content clears the home indicator
+    paddingTop: 20,
+    paddingBottom: 12,
   },
-  // Short horizontal bar at the top of the sheet — standard iOS/Android affordance
-  handle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D1D6",
-    marginBottom: 16,
-  },
-  // Bold heading at the top of the sheet
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#1C1C1E",
-    marginBottom: 16,
-  },
-  // Task title — displayed prominently, slightly larger than body text
-  taskTitle: {
-    fontSize: 16,
+  // Title input — large text, no border, takes full width
+  titleInput: {
+    fontSize: 18,
     fontWeight: "500",
     color: "#1C1C1E",
-    marginBottom: 4,
+    paddingVertical: 4,
   },
-  // Task description — smaller, muted colour
-  taskDescription: {
+  // Description input — smaller text below title, subtle styling
+  descriptionInput: {
     fontSize: 14,
-    color: "#8E8E93",
-    lineHeight: 20,
-    marginBottom: 4,
+    color: "#666",
+    paddingVertical: 4,
+    marginBottom: 8,
   },
-  // Thin horizontal rule between task info and scheduling controls
+  // Thin horizontal rule between text inputs and scheduling controls
   divider: {
     height: StyleSheet.hairlineWidth, // 0.5px on most screens — visually subtle
     backgroundColor: "#E5E5EA",
-    marginVertical: 16,
+    marginVertical: 12,
   },
   // Row that holds the two chip pills side by side
   chipRow: {
     flexDirection: "row",
     gap: 10, // Space between chips
-    marginBottom: 16,
-    alignItems: "center", // Vertically centre chips even when DateTimePicker changes height
-  },
-  // iOS-only: makes the Pick Time chip a row so the label and picker sit side by side
-  chipRow_ios: {
-    flexDirection: "row",
+    marginBottom: 12,
     alignItems: "center",
-    gap: 4,
-  },
-  // Fixed width for the iOS compact DateTimePicker so it renders the full time label
-  iosPickerInline: {
-    width: 90,
   },
   // Base pill chip style — outlined by default
   chip: {
@@ -338,11 +329,12 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: "#FFFFFF",
   },
-  // Bottom row holding Cancel and Confirm buttons
-  buttonRow: {
+  // Bottom row — Cancel and Confirm buttons side by side
+  bottomRow: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 4,
+    marginTop: 8,
+    paddingVertical: 8,
   },
   // Cancel button — outlined, flexible width to fill remaining space
   cancelButton: {
@@ -367,6 +359,10 @@ const styles = StyleSheet.create({
     backgroundColor: brand,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // Dimmed confirm button when title is empty
+  confirmButtonDisabled: {
+    opacity: 0.4,
   },
   confirmButtonText: {
     fontSize: 16,

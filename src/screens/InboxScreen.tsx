@@ -51,14 +51,17 @@ function InboxScreen({
 
   /**
    * Confirm handler for the scheduling sheet.
-   * Forwards the user's scheduling choice to DragContext to finalise the move,
+   * Forwards edited text and scheduling choice to DragContext to finalise the move,
    * then signals the parent to close the sheet.
    */
   function handleScheduleConfirm(
+    title: string,
+    description: string,
     scheduledTime: string | null,
     timeSlot: "anytime" | "morning" | "afternoon" | "evening",
   ) {
-    confirmPendingDrop(scheduledTime, timeSlot); // Commit move with scheduling metadata
+    console.log("Schedule confirm:", { title, description, scheduledTime, timeSlot });
+    confirmPendingDrop(title, description, scheduledTime, timeSlot); // Commit move with edited text + scheduling
     onScheduleSheetClose(); // Tell the parent to hide the sheet
   }
 
