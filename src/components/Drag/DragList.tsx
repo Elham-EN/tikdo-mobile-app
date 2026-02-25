@@ -27,6 +27,8 @@ interface DragListProps {
   listIconLeft: React.ReactNode; // Icon element rendered to the left of the list name
   // Pre-filtered and sorted items for this list — supplied by parent state
   tasks: DragItem[];
+  // Optional callback fired when the user taps (short press) an item — opens the edit sheet
+  onItemPress?: (taskId: string) => void;
 }
 
 // ─── InsertionLine ────────────────────────────────────────────────────────────
@@ -81,6 +83,7 @@ function DragList({
   listName,
   listIconLeft,
   tasks,
+  onItemPress,
 }: DragListProps): React.ReactElement {
   const { listLayouts, currentScrollY } = useDragContext();
 
@@ -253,6 +256,8 @@ function DragList({
                 description={task.description}
                 scheduledTime={(task as TaskItem).scheduledTime}
                 timeSlot={(task as TaskItem).timeSlot}
+                // Pass onPress so a tap on this item fires onItemPress with its taskId
+                onPress={onItemPress ? () => onItemPress(task.taskId) : undefined}
               />
               {/* Slot after this item — key is the NEXT item's taskId so it
                   matches hitTest's "insert before next item" slot key.

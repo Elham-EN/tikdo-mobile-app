@@ -2,8 +2,10 @@
 // Handles layout, list rendering, FAB placement, and scroll padding above the tab bar.
 // Also wires the Today scheduling sheet: reads the pending drop from context,
 // resolves the task data to show in the sheet, and forwards confirm/cancel to context.
+// Wires the EditTaskSheet: tapping any item opens an inline edit sheet for that task.
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
 import AddTaskSheet from "@/components/ui/AddTodoItem";
+import EditTaskSheet from "@/components/ui/EditTaskSheet";
 import FabButton from "@/components/ui/FabButton";
 import TodayScheduleSheet from "@/components/ui/TodayScheduleSheet";
 import { useDragContext } from "@/contexts/DragContext";
@@ -17,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 interface Props {
   tasks: TaskItem[]; // Full tasks array passed down from index.tsx
   onAddTask: (task: TaskItem) => void; // Called when user submits a new task
+  onEditTask: (taskId: string, title: string, description: string) => void; // Called when user saves edits
   isScheduleSheetVisible: boolean; // Whether the Today scheduling sheet is open
   onScheduleSheetClose: () => void; // Called when the sheet should close (confirm or cancel)
 }
@@ -29,11 +32,15 @@ interface Props {
 function InboxScreen({
   tasks,
   onAddTask,
+  onEditTask,
   isScheduleSheetVisible,
   onScheduleSheetClose,
 }: Props): React.ReactElement {
   // Controls visibility of the "Add Task" sheet triggered by the FAB
   const [isSheetVisible, setIsSheetVisible] = React.useState(false);
+
+  // The taskId of the item the user tapped — null means no edit sheet is open
+  const [editingTaskId, setEditingTaskId] = React.useState<string | null>(null);
 
   // Safe area insets for proper spacing around notch and home indicator
   const insets = useSafeAreaInsets();
@@ -49,6 +56,12 @@ function InboxScreen({
     ? tasks.find((t) => t.taskId === pendingDrop.sourceTaskId) ?? null
     : null;
 
+  // Resolve the task being edited from the tasks array so the sheet gets pre-fill data.
+  // null when no item is being edited (sheet is closed).
+  const editingTask = editingTaskId
+    ? tasks.find((t) => t.taskId === editingTaskId) ?? null
+    : null;
+
   /**
    * Confirm handler for the scheduling sheet.
    * Forwards edited text and scheduling choice to DragContext to finalise the move,
@@ -60,7 +73,6 @@ function InboxScreen({
     scheduledTime: string | null,
     timeSlot: "anytime" | "morning" | "afternoon" | "evening",
   ) {
-    console.log("Schedule confirm:", { title, description, scheduledTime, timeSlot });
     confirmPendingDrop(title, description, scheduledTime, timeSlot); // Commit move with edited text + scheduling
     onScheduleSheetClose(); // Tell the parent to hide the sheet
   }
@@ -73,6 +85,17 @@ function InboxScreen({
   function handleScheduleCancel() {
     cancelPendingDrop(); // Discard the intercepted drop — no state mutation
     onScheduleSheetClose(); // Tell the parent to hide the sheet
+  }
+
+  /**
+   * Confirm handler for the edit sheet.
+   * Passes the edited title and description up to index.tsx to persist.
+   * Then closes the edit sheet.
+   */
+  function handleEditConfirm(title: string, description: string) {
+    if (!editingTaskId) return; // Safety guard — should never be null here
+    onEditTask(editingTaskId, title, description); // Persist the changes
+    setEditingTaskId(null); // Close the edit sheet
   }
 
   // Returns tasks for a given list, sorted by order field
@@ -100,6 +123,8 @@ function InboxScreen({
             listName={list.listName}
             listIconLeft={<Ionicons name={list.listIcon} size={24} />}
             tasks={getTasksForList(list.listId)}
+            // Tap on any item sets editingTaskId to open the edit sheet for that item
+            onItemPress={(taskId) => setEditingTaskId(taskId)}
           />
         ))}
       </DragScrollView>
@@ -115,6 +140,16 @@ function InboxScreen({
         visible={isSheetVisible}
         onClose={() => setIsSheetVisible(false)}
         onAddTask={onAddTask}
+      />
+
+      {/* Edit Task sheet — opens when the user taps an existing Inbox item.
+          Pre-fills title and description from the tapped task. */}
+      <EditTaskSheet
+        visible={editingTaskId !== null}
+        taskTitle={editingTask?.title ?? ""}
+        taskDescription={editingTask?.description ?? ""}
+        onConfirm={handleEditConfirm}
+        onCancel={() => setEditingTaskId(null)}
       />
 
       {/* Today Scheduling sheet — shown when a task is dropped onto the Today list.
