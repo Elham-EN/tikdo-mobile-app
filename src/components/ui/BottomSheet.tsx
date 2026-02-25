@@ -63,7 +63,7 @@ export default function BottomSheet({
       cancelAnimation(translateY);
       cancelAnimation(overlayOpacity);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Runs only on unmount
 
   /**
