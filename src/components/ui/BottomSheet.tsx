@@ -130,9 +130,13 @@ export default function BottomSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
-      {/* KeyboardAvoidingView pushes the sheet up when the software keyboard appears */}
+      {/* KeyboardAvoidingView pushes the sheet up when the software keyboard appears.
+          keyboardVerticalOffset adds extra clearance above the keyboard so the sheet
+          sits slightly below the keyboard top edge — this lets the keyboard's rounded
+          corners show instead of being obscured by the flat sheet edge. */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"} // iOS needs padding mode, Android needs height mode
+        keyboardVerticalOffset={-16} // 16px gap between sheet bottom edge and keyboard top
         style={styles.sheetWrapper}
         pointerEvents="box-none" // Lets taps on empty space fall through to the backdrop
       >

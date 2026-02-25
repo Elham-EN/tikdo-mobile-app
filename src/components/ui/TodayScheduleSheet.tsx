@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 20,
   },
   // Title input — large text, no border, takes full width
   titleInput: {

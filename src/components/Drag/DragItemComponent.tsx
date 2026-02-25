@@ -55,6 +55,8 @@ interface DragItemComponentProps {
   // Scheduling metadata — only set for Today list items
   scheduledTime?: string | null; // "HH:MM" 24-hour string or null for Anytime
   timeSlot?: TaskItem["timeSlot"]; // Time-of-day bucket, undefined if not in Today
+  // Called when the user taps the item (short press, no hold) — opens the edit sheet
+  onPress?: () => void;
 }
 
 /**
@@ -69,6 +71,7 @@ export default function DragItemComponent({
   description,
   scheduledTime,
   timeSlot,
+  onPress,
 }: DragItemComponentProps): React.ReactElement {
   const {
     isDragging,
@@ -201,6 +204,18 @@ export default function DragItemComponent({
   }
 
   // ─── Gesture ────────────────────────────────────────────────────────────────
+
+  // Tap gesture — fires on a short press (no hold).
+  // Exclusive with the pan so a quick tap never accidentally starts a drag.
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      "worklet";
+      // Schedule the onPress callback on the RN thread since it triggers React state
+      if (onPress) {
+        scheduleOnRN(onPress);
+      }
+    });
+
   const panGesture = Gesture.Pan()
     // Activate only after a 400ms hold — gives the ScrollView time to claim
     // vertical flicks before the drag kicks in
@@ -377,8 +392,13 @@ export default function DragItemComponent({
     return format(parsed, "h:mm a"); // e.g. "3:10 PM"
   }, [timeSlot, scheduledTime]);
 
+  // Exclusive: pan (long-press drag) takes priority; tap fires on a quick press.
+  // Gesture.Exclusive means only one gesture can be active at a time — the pan
+  // activates after 400ms hold and cancels the tap if the user holds long enough.
+  const combinedGesture = Gesture.Exclusive(panGesture, tapGesture);
+
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={combinedGesture}>
       <Animated.View
         ref={itemRef}
         style={[styles.taskItem, itemAnimatedStyle]}

@@ -43,6 +43,26 @@ export default function Index(): React.ReactElement {
   }
 
   /**
+   * Permanently removes a task by ID from the tasks array and persists the change.
+   */
+  function handleDeleteTask(taskId: string): void {
+    persistTasks((prev) => prev.filter((t) => t.taskId !== taskId));
+  }
+
+  /**
+   * Saves edited title and description for an existing Inbox task.
+   * Finds the task by ID and replaces its text fields, keeping everything else unchanged.
+   */
+  function handleEditTask(taskId: string, title: string, description: string): void {
+    persistTasks((prev) =>
+      prev.map((t) =>
+        // Only update the matching task — leave all other tasks untouched
+        t.taskId === taskId ? { ...t, title, description } : t,
+      ),
+    );
+  }
+
+  /**
    * Adds a new task to the top of its target list.
    * Finds the lowest existing order in the list and assigns minOrder - 1
    * so the new task sorts above all others.
@@ -124,6 +144,8 @@ export default function Index(): React.ReactElement {
       <InboxScreen
         tasks={tasks}
         onAddTask={handleAddTask}
+        onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
         isScheduleSheetVisible={isScheduleSheetVisible}
         onScheduleSheetClose={() => setIsScheduleSheetVisible(false)} // Close the sheet
       />

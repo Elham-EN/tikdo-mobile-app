@@ -4,6 +4,7 @@
 // back to the same MMKV storage so changes persist across tab switches.
 
 import { DragGhost, DragList, DragScrollView } from "@/components/Drag";
+import EditTodayTaskSheet from "@/components/ui/EditTodayTaskSheet";
 import TodayScheduleSheet, {
   TimeRange,
 } from "@/components/ui/TodayScheduleSheet";
@@ -54,6 +55,15 @@ interface TodayContentProps {
   isSheetVisible: boolean; // Whether the reschedule sheet is open
   targetSectionId: string | null; // Which section the pending drop targets
   onSheetClose: () => void; // Called when the sheet should close
+  // Called when the user confirms an inline edit; provides taskId + updated fields
+  onEditTask: (
+    taskId: string,
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: "anytime" | "morning" | "afternoon" | "evening",
+  ) => void;
+  onDeleteTask: (taskId: string) => void; // Called when user deletes a task permanently
 }
 
 function TodayContent({
@@ -61,14 +71,24 @@ function TodayContent({
   isSheetVisible,
   targetSectionId,
   onSheetClose,
+  onEditTask,
+  onDeleteTask,
 }: TodayContentProps): React.ReactElement {
   const insets = useSafeAreaInsets(); // Safe area for notch / home indicator
   const { pendingDrop, confirmPendingDrop, cancelPendingDrop } =
     useDragContext();
 
+  // The taskId of the item the user tapped — null means no edit sheet is open
+  const [editingTaskId, setEditingTaskId] = React.useState<string | null>(null);
+
   // Look up the pending task so we can pre-fill title/description in the sheet
   const pendingTask = pendingDrop
     ? (tasks.find((t) => t.taskId === pendingDrop.sourceTaskId) ?? null)
+    : null;
+
+  // Resolve the full task being edited so the sheet gets pre-filled data
+  const editingTask = editingTaskId
+    ? (tasks.find((t) => t.taskId === editingTaskId) ?? null)
     : null;
 
   // Determine chip pre-selection based on which section the task is being moved to.
@@ -98,6 +118,31 @@ function TodayContent({
   function handleCancel() {
     cancelPendingDrop();
     onSheetClose();
+  }
+
+  /**
+   * Confirm handler for the inline edit sheet.
+   * Passes the updated fields up to Today root to persist, then closes the sheet.
+   */
+  function handleEditConfirm(
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: "anytime" | "morning" | "afternoon" | "evening",
+  ) {
+    if (!editingTaskId) return; // Safety guard
+    onEditTask(editingTaskId, title, description, scheduledTime, timeSlot);
+    setEditingTaskId(null); // Close the edit sheet
+  }
+
+  /**
+   * Delete handler for the inline edit sheet.
+   * Passes the task ID up to Today root to remove it permanently, then closes the sheet.
+   */
+  function handleDeleteTask() {
+    if (!editingTaskId) return; // Safety guard
+    onDeleteTask(editingTaskId); // Remove the task from state and storage
+    setEditingTaskId(null); // Close the edit sheet
   }
 
   // Filter Today tasks by timeSlot for each section, sorted by order
@@ -140,6 +185,7 @@ function TodayContent({
           listName="Anytime"
           listIconLeft={<Ionicons name="infinite-outline" size={24} />}
           tasks={getSection("anytime")}
+          onItemPress={(taskId) => setEditingTaskId(taskId)}
         />
 
         {/* Morning section — tasks scheduled 5:00 AM – 11:59 AM */}
@@ -148,6 +194,7 @@ function TodayContent({
           listName="Morning"
           listIconLeft={<Ionicons name="partly-sunny-outline" size={24} />}
           tasks={getSection("morning")}
+          onItemPress={(taskId) => setEditingTaskId(taskId)}
         />
 
         {/* Afternoon section — tasks scheduled 12:00 PM – 4:59 PM */}
@@ -156,6 +203,7 @@ function TodayContent({
           listName="Afternoon"
           listIconLeft={<Ionicons name="sunny-outline" size={24} />}
           tasks={getSection("afternoon")}
+          onItemPress={(taskId) => setEditingTaskId(taskId)}
         />
 
         {/* Evening section — tasks scheduled 5:00 PM – 11:59 PM */}
@@ -164,11 +212,25 @@ function TodayContent({
           listName="Evening"
           listIconLeft={<Ionicons name="moon-outline" size={24} />}
           tasks={getSection("evening")}
+          onItemPress={(taskId) => setEditingTaskId(taskId)}
         />
       </DragScrollView>
 
       {/* Ghost floats above everything during a drag */}
       <DragGhost />
+
+      {/* Edit sheet — opens when the user taps a Today task.
+          Pre-fills title, description, and current scheduling choice. */}
+      <EditTodayTaskSheet
+        visible={editingTaskId !== null}
+        taskTitle={editingTask?.title ?? ""}
+        taskDescription={editingTask?.description ?? ""}
+        currentTimeSlot={editingTask?.timeSlot}
+        currentScheduledTime={editingTask?.scheduledTime}
+        onConfirm={handleEditConfirm}
+        onCancel={() => setEditingTaskId(null)}
+        onDelete={handleDeleteTask}
+      />
 
       {/* Reschedule sheet — opens when a task is dragged between timed sections.
           timeRange constrains the picker to the target section's valid hours. */}
@@ -234,6 +296,34 @@ export default function Today(): React.ReactElement {
   }
 
   /**
+   * Permanently removes a task by ID from the tasks array and persists the change.
+   */
+  function handleDeleteTask(taskId: string): void {
+    persistTasks((prev) => prev.filter((t) => t.taskId !== taskId));
+  }
+
+  /**
+   * Saves inline edits for a Today task including any scheduling changes.
+   * Finds the task by ID and replaces its text and scheduling fields.
+   */
+  function handleEditTask(
+    taskId: string,
+    title: string,
+    description: string,
+    scheduledTime: string | null,
+    timeSlot: "anytime" | "morning" | "afternoon" | "evening",
+  ): void {
+    persistTasks((prev) =>
+      prev.map((t) =>
+        // Only update the matching task — all other tasks are left untouched
+        t.taskId === taskId
+          ? { ...t, title, description, scheduledTime, timeSlot }
+          : t,
+      ),
+    );
+  }
+
+  /**
    * Called by DragProvider when a task is dragged from one timed section to another.
    * Saves which section was targeted then opens the reschedule sheet.
    */
@@ -252,6 +342,8 @@ export default function Today(): React.ReactElement {
         isSheetVisible={isSheetVisible}
         targetSectionId={targetSectionId}
         onSheetClose={() => setIsSheetVisible(false)}
+        onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
       />
     </DragProvider>
   );
