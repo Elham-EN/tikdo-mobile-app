@@ -6,11 +6,11 @@
 import { lists } from "@/data/data";
 import { TaskItem } from "@/types/todoItem.types";
 import { brand, light_surface } from "@/utils/colors";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
 import { format } from "date-fns";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import {
@@ -201,7 +201,9 @@ export default function AddTaskSheet({
         />
 
         {/* iOS inline spinner — shown above the bottom row when Pick Time is active on iOS */}
-        {isTodaySelected && scheduling === "picktime" && Platform.OS === "ios" ? (
+        {isTodaySelected &&
+        scheduling === "picktime" &&
+        Platform.OS === "ios" ? (
           <DateTimePicker
             value={pickedTime} // Current time shown on the drum-roll wheels
             mode="time" // Time picker only — no date
@@ -263,7 +265,9 @@ export default function AddTaskSheet({
                   ]}
                 >
                   {/* Show formatted time once a time has been picked, otherwise label */}
-                  {scheduling === "picktime" ? formatTime(pickedTime) : "Pick Time"}
+                  {scheduling === "picktime"
+                    ? formatTime(pickedTime)
+                    : "Pick Time"}
                 </Text>
               </Pressable>
             </View>
@@ -294,7 +298,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 20,
   },
   // Title input — large text, no border, takes full width
   titleInput: {

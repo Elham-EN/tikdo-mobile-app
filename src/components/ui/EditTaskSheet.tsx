@@ -6,13 +6,7 @@
 import { brand, light_surface } from "@/utils/colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import BottomSheet from "./BottomSheet";
 
 // Props the parent must supply to drive this sheet
@@ -135,7 +129,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
-    // Tall minimum height so it feels like a proper edit screen
     minHeight: 320,
   },
   // Short rounded bar at the top — standard iOS sheet drag handle visual
