@@ -17,6 +17,7 @@ interface EditTaskSheetProps {
   // Called when user confirms edits; provides the updated title and description
   onConfirm: (title: string, description: string) => void;
   onCancel: () => void; // Called when user cancels or taps the backdrop
+  onDelete: () => void; // Called when user taps the delete button — removes the task permanently
 }
 
 /**
@@ -31,6 +32,7 @@ export default function EditTaskSheet({
   taskDescription,
   onConfirm,
   onCancel,
+  onDelete,
 }: EditTaskSheetProps): React.ReactElement {
   // Editable title — initialised from prop and reset each time sheet opens
   const [title, setTitle] = React.useState(taskTitle);
@@ -98,8 +100,8 @@ export default function EditTaskSheet({
 
         {/* Bottom action row — Cancel on left, Confirm on right */}
         <View style={styles.bottomRow}>
-          {/* Delete button - red circle with trashcan, save changes */}
-          <Pressable style={styles.deleteButton}>
+          {/* Delete button — red circle with trash icon, permanently removes the task */}
+          <Pressable style={styles.deleteButton} onPress={onDelete}>
             <Ionicons name="trash-bin" size={22} color="#fff" />
           </Pressable>
           <View style={styles.bottomRowRight}>

@@ -38,6 +38,7 @@ interface EditTodayTaskSheetProps {
     timeSlot: "anytime" | "morning" | "afternoon" | "evening",
   ) => void;
   onCancel: () => void; // Called when user cancels or taps the backdrop
+  onDelete: () => void; // Called when user taps the delete button — removes the task permanently
 }
 
 /**
@@ -94,6 +95,7 @@ export default function EditTodayTaskSheet({
   currentScheduledTime,
   onConfirm,
   onCancel,
+  onDelete,
 }: EditTodayTaskSheetProps): React.ReactElement {
   // Editable title — reset from prop each time the sheet opens
   const [title, setTitle] = React.useState(taskTitle);
@@ -290,8 +292,8 @@ export default function EditTodayTaskSheet({
 
         {/* Bottom action row — Cancel on left, Confirm on right */}
         <View style={styles.bottomRow}>
-          {/* Delete button - red circle with trashcan, save changes */}
-          <Pressable style={styles.deleteButton}>
+          {/* Delete button — red circle with trash icon, permanently removes the task */}
+          <Pressable style={styles.deleteButton} onPress={onDelete}>
             <Ionicons name="trash-bin" size={22} color="#fff" />
           </Pressable>
           <View style={styles.bottomRowRight}>

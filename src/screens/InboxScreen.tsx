@@ -20,6 +20,7 @@ interface Props {
   tasks: TaskItem[]; // Full tasks array passed down from index.tsx
   onAddTask: (task: TaskItem) => void; // Called when user submits a new task
   onEditTask: (taskId: string, title: string, description: string) => void; // Called when user saves edits
+  onDeleteTask: (taskId: string) => void; // Called when user deletes a task permanently
   isScheduleSheetVisible: boolean; // Whether the Today scheduling sheet is open
   onScheduleSheetClose: () => void; // Called when the sheet should close (confirm or cancel)
 }
@@ -33,6 +34,7 @@ function InboxScreen({
   tasks,
   onAddTask,
   onEditTask,
+  onDeleteTask,
   isScheduleSheetVisible,
   onScheduleSheetClose,
 }: Props): React.ReactElement {
@@ -98,6 +100,16 @@ function InboxScreen({
     setEditingTaskId(null); // Close the edit sheet
   }
 
+  /**
+   * Delete handler for the edit sheet.
+   * Passes the task ID up to index.tsx to remove it permanently, then closes the sheet.
+   */
+  function handleDeleteTask() {
+    if (!editingTaskId) return; // Safety guard
+    onDeleteTask(editingTaskId); // Remove the task from state and storage
+    setEditingTaskId(null); // Close the edit sheet
+  }
+
   // Returns tasks for a given list, sorted by order field
   function getTasksForList(listId: string): TaskItem[] {
     return tasks
@@ -150,6 +162,7 @@ function InboxScreen({
         taskDescription={editingTask?.description ?? ""}
         onConfirm={handleEditConfirm}
         onCancel={() => setEditingTaskId(null)}
+        onDelete={handleDeleteTask}
       />
 
       {/* Today Scheduling sheet — shown when a task is dropped onto the Today list.

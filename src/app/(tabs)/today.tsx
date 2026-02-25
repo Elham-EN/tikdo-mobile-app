@@ -63,6 +63,7 @@ interface TodayContentProps {
     scheduledTime: string | null,
     timeSlot: "anytime" | "morning" | "afternoon" | "evening",
   ) => void;
+  onDeleteTask: (taskId: string) => void; // Called when user deletes a task permanently
 }
 
 function TodayContent({
@@ -71,6 +72,7 @@ function TodayContent({
   targetSectionId,
   onSheetClose,
   onEditTask,
+  onDeleteTask,
 }: TodayContentProps): React.ReactElement {
   const insets = useSafeAreaInsets(); // Safe area for notch / home indicator
   const { pendingDrop, confirmPendingDrop, cancelPendingDrop } =
@@ -130,6 +132,16 @@ function TodayContent({
   ) {
     if (!editingTaskId) return; // Safety guard
     onEditTask(editingTaskId, title, description, scheduledTime, timeSlot);
+    setEditingTaskId(null); // Close the edit sheet
+  }
+
+  /**
+   * Delete handler for the inline edit sheet.
+   * Passes the task ID up to Today root to remove it permanently, then closes the sheet.
+   */
+  function handleDeleteTask() {
+    if (!editingTaskId) return; // Safety guard
+    onDeleteTask(editingTaskId); // Remove the task from state and storage
     setEditingTaskId(null); // Close the edit sheet
   }
 
@@ -217,6 +229,7 @@ function TodayContent({
         currentScheduledTime={editingTask?.scheduledTime}
         onConfirm={handleEditConfirm}
         onCancel={() => setEditingTaskId(null)}
+        onDelete={handleDeleteTask}
       />
 
       {/* Reschedule sheet — opens when a task is dragged between timed sections.
@@ -283,6 +296,13 @@ export default function Today(): React.ReactElement {
   }
 
   /**
+   * Permanently removes a task by ID from the tasks array and persists the change.
+   */
+  function handleDeleteTask(taskId: string): void {
+    persistTasks((prev) => prev.filter((t) => t.taskId !== taskId));
+  }
+
+  /**
    * Saves inline edits for a Today task including any scheduling changes.
    * Finds the task by ID and replaces its text and scheduling fields.
    */
@@ -323,6 +343,7 @@ export default function Today(): React.ReactElement {
         targetSectionId={targetSectionId}
         onSheetClose={() => setIsSheetVisible(false)}
         onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
       />
     </DragProvider>
   );
