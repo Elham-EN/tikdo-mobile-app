@@ -144,7 +144,13 @@ export default function EditTodayTaskSheet({
       const timer = setTimeout(() => titleRef.current?.focus(), 100);
       return () => clearTimeout(timer); // Clean up if sheet closes before timer fires
     }
-  }, [visible, taskTitle, taskDescription, currentTimeSlot, currentScheduledTime]);
+  }, [
+    visible,
+    taskTitle,
+    taskDescription,
+    currentTimeSlot,
+    currentScheduledTime,
+  ]);
 
   /**
    * Opens the Android native time picker imperatively.
@@ -282,24 +288,30 @@ export default function EditTodayTaskSheet({
           />
         ) : null}
 
-        {/* Bottom row — Cancel on left, Confirm on right */}
+        {/* Bottom action row — Cancel on left, Confirm on right */}
         <View style={styles.bottomRow}>
-          {/* Cancel — grey circle, discards all changes */}
-          <Pressable style={styles.cancelButton} onPress={onCancel}>
-            <Ionicons name="close" size={22} color="#3C3C43" />
+          {/* Delete button - red circle with trashcan, save changes */}
+          <Pressable style={styles.deleteButton}>
+            <Ionicons name="trash-bin" size={22} color="#fff" />
           </Pressable>
+          <View style={styles.bottomRowRight}>
+            {/* Cancel button — grey circle with X icon, discards changes */}
+            <Pressable style={styles.cancelButton} onPress={onCancel}>
+              <Ionicons name="close" size={22} color="#3C3C43" />
+            </Pressable>
 
-          {/* Confirm — brand-blue circle, saves all changes */}
-          <Pressable
-            style={[
-              styles.confirmButton,
-              !title.trim() && styles.confirmButtonDisabled, // Dim when title is empty
-            ]}
-            onPress={handleConfirm}
-            disabled={!title.trim()} // Prevent saving with an empty title
-          >
-            <Ionicons name="checkmark" size={22} color="#fff" />
-          </Pressable>
+            {/* Confirm button — brand-blue circle with checkmark, saves changes */}
+            <Pressable
+              style={[
+                styles.confirmButton,
+                !title.trim() && styles.confirmButtonDisabled, // Dim when title is empty
+              ]}
+              onPress={handleConfirm}
+              disabled={!title.trim()} // Prevent submitting with an empty title
+            >
+              <Ionicons name="checkmark" size={22} color="#fff" />
+            </Pressable>
+          </View>
         </View>
       </View>
     </BottomSheet>
@@ -314,7 +326,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   // Standard iOS sheet handle — short rounded bar at the top centre
   handle: {
@@ -388,13 +400,16 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: "#FFFFFF",
   },
-  // Bottom action row — buttons pushed to the right
+  // Bottom row pushes buttons to the right edge
   bottomRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     gap: 12,
-    marginTop: 12,
-    paddingVertical: 8,
+    marginTop: 16,
+  },
+  bottomRowRight: {
+    flexDirection: "row",
+    gap: 12,
   },
   // Cancel button — grey circle
   cancelButton: {
@@ -411,6 +426,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: brand,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#DA3D20",
     alignItems: "center",
     justifyContent: "center",
   },
